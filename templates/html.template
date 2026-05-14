@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="{lang}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="author" content="{author}" />
+  <meta name="generator" content="{programname}" />
+
+  <!-- NOT FOR EBOOK: viewport meta tag is browser-specific and ignored or harmful in EPUB readers -->
+  {viewport_meta}
+
+  <title>{title}</title>
+
+  <style>
+
+    /* ------------------------------------------------------------------ */
+    /* Reset                                                                */
+    /* ------------------------------------------------------------------ */
+
+    /* NOT FOR EBOOK: broad resets via * selector can conflict with reader defaults */
+    {reset_css}
+
+    /* ------------------------------------------------------------------ */
+    /* Typography – base                                                    */
+    /* ------------------------------------------------------------------ */
+
+    body {
+      font-family: serif;        /* safe fallback; EPUB readers may substitute */
+      font-size: 1em;            /* relative units preferred; px allowed but em/% safer */
+      line-height: 1.5;
+      color: #000;
+
+      /* NOT FOR EBOOK: fixed max-width / centering layout is browser-only */
+      {body_layout_css}
+
+      /* NOT FOR EBOOK: background colors/images often ignored or overridden by readers */
+      {body_background_css}
+    }
+
+    /* NOT FOR EBOOK: @font-face with external URLs unreliable in EPUB readers;
+       embedded fonts via the EPUB manifest are the correct mechanism */
+    /* @font-face {
+      font-family: "MyFont";
+      src: url("https://example.com/myfont.woff2") format("woff2");
+    } */
+
+    /* ------------------------------------------------------------------ */
+    /* Headings                                                             */
+    /* ------------------------------------------------------------------ */
+
+    h1, h2, h3, h4 {
+      font-family: sans-serif;
+      font-weight: bold;
+      line-height: 1.2;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      page-break-after: avoid;   /* EPUB2 compat; use break-after: avoid for EPUB3 */
+    }
+
+    h1 { font-size: 1.8em; }
+    h2 { font-size: 1.4em; }
+    h3 { font-size: 1.2em; }
+    h4 { font-size: 1.0em; }
+
+    /* ------------------------------------------------------------------ */
+    /* Book header                                                          */
+    /* ------------------------------------------------------------------ */
+
+    header {
+      text-align: center;
+      font-family: sans-serif;
+      margin-bottom: 3em;
+    }
+
+    header h1.ebook-title {
+      font-size: 1.728em;    /* \LARGE */
+      text-align: center;
+      margin-bottom: 0.2em;
+    }
+
+    p.ebook-subtitle {
+      font-size: 1.44em;     /* \Large */
+      font-style: italic;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 1em;
+    }
+
+    p.ebook-author {
+      font-size: 1.44em;     /* \Large */
+      text-align: center;
+      margin-bottom: 0.3em;
+    }
+
+    hr.ebook-copyright-rule {
+      border: none;
+      border-top: 1px solid #aaa;
+      margin-top: 2em;
+      margin-bottom: 0.5em;
+    }
+
+    p.ebook-copyright {
+      font-size: 0.85em;
+      color: #555;
+      text-align: left;
+      margin-top: 0;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Paragraphs                                                           */
+    /* ------------------------------------------------------------------ */
+
+    p {
+      margin-top: 0;
+      margin-bottom: 0.8em;
+      text-align: justify;
+      /* text-indent: 1.2em; */  /* enable for first-line indent style; reset to 0 in p.quotation */
+      orphans: 2;                /* minimum lines at bottom of page */
+      widows: 2;                 /* minimum lines at top of page */
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Block elements                                                       */
+    /* ------------------------------------------------------------------ */
+
+    blockquote {
+      margin: 1em 2em;
+      font-style: italic;
+    }
+
+    p.quotation {
+      margin-left: 2em;
+      margin-right: 2em;
+      text-indent: 0;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Inline elements                                                      */
+    /* ------------------------------------------------------------------ */
+
+    em    { font-style: italic; }
+    strong { font-weight: bold; }
+
+    span.longversionname { {longversionname_css} }
+    span.transliteration { {transliteration_css} }
+    span.verseemphasis { {verseemphasis_css} }
+
+    /* NOT FOR EBOOK: text-shadow has very limited reader support */
+    {dropcap_css}
+
+    /* ------------------------------------------------------------------ */
+    /* Hebrew text                                                          */
+    /* ------------------------------------------------------------------ */
+
+    span.hebrew {
+      direction: rtl;
+      unicode-bidi: embed;       /* isolate the RTL run inside LTR context */
+      font-family: "SBL Hebrew", "Ezra SIL", "David", serif;
+      font-size: {hebrewfontsize};
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Greek text                                                           */
+    /* ------------------------------------------------------------------ */
+
+    span.greek {
+      font-family: "SBL Greek", "Gentium Plus", "Gentium", "Palatino Linotype", serif;
+      font-size: {greekfontsize};
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Links                                                                */
+    /* ------------------------------------------------------------------ */
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+    }
+
+    /* NOT FOR EBOOK: :hover / :focus pseudo-classes are ignored in EPUB readers */
+    {a_hover_css}
+
+    /* ------------------------------------------------------------------ */
+    /* Images                                                               */
+    /* ------------------------------------------------------------------ */
+
+    img {
+      max-width: 100%;
+      height: auto;
+
+      /* NOT FOR EBOOK: box-shadow is unsupported in most readers */
+      {img_boxshadow_css}
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Tables                                                               */
+    /* ------------------------------------------------------------------ */
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 1em;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.4em 0.6em;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      font-weight: bold;
+
+      /* NOT FOR EBOOK: background-color on table headers often ignored */
+      {th_background_css}
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* NOT FOR EBOOK: everything below this line is browser-only           */
+    /* ------------------------------------------------------------------ */
+
+    /* NOT FOR EBOOK: CSS custom properties (variables) have very limited
+       support in EPUB readers */
+    /* :root { --accent: #005faf; } */
+
+    /* NOT FOR EBOOK: position:fixed is meaningless in paginated readers */
+    /* .site-header { position: fixed; top: 0; width: 100%; } */
+
+    /* NOT FOR EBOOK: CSS Grid layout is unsupported or unreliable in readers */
+    /* .layout { display: grid; grid-template-columns: 1fr 3fr; } */
+
+    /* NOT FOR EBOOK: Flexbox has very limited EPUB reader support */
+    /* .nav { display: flex; gap: 1rem; } */
+
+    /* NOT FOR EBOOK: CSS animations and transitions are ignored in readers */
+    /* @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } } */
+    /* .chapter { animation: fade-in 0.4s ease; } */
+
+    /* NOT FOR EBOOK: viewport units (vw, vh, vmin, vmax) are not reliable */
+    /* .hero { height: 80vh; } */
+
+    /* NOT FOR EBOOK: @media queries are largely ignored in EPUB readers;
+       use epub:type and EPUB-specific mechanisms for layout variants */
+    /* @media (max-width: 600px) { body { font-size: 0.9em; } } */
+
+    /* NOT FOR EBOOK: ::before / ::after pseudo-elements have poor reader support */
+    /* h2::before { content: "§ "; color: #888; } */
+
+    /* NOT FOR EBOOK: CSS counters for auto-numbering are unreliable in readers */
+    /* body { counter-reset: chapter; } */
+    /* h2::before { counter-increment: chapter; content: counter(chapter) ". "; } */
+
+    /* NOT FOR EBOOK: border-radius rendering varies widely across readers */
+    /* .note { border-radius: 4px; } */
+
+    /* NOT FOR EBOOK: multi-column layout is unsupported in most readers */
+    /* .index { column-count: 2; column-gap: 2em; } */
+
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 class="ebook-title">{title}</h1>
+{subtitle}  <p class="ebook-author">{author}</p>
+</header>
+
+{body}
+
+{copyright_block}
+
+</body>
+</html>
