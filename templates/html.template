@@ -277,7 +277,7 @@
     /* NOT FOR EBOOK: ::before / ::after pseudo-elements have poor reader support */
     /* h2::before { content: "§ "; color: #888; } */
 
-    /* NOT FOR EBOOK: CSS counters for auto-numbering are unreliable in readers */
+    /* NOT FOR EBOOK: CSS counters for auto-numbering are unreliable in EPUB readers */
     /* body { counter-reset: chapter; } */
     /* h2::before { counter-increment: chapter; content: counter(chapter) ". "; } */
 

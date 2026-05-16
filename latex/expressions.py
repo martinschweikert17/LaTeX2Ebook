@@ -55,7 +55,11 @@ def convert_expressions(raw: str) -> str:
         '--':           '&ndash;',
         r'\ldots':      '&hellip;',
         r'\,':          '&thinsp;',
+        r'\thinspace':  '&thinsp;',
+        r'\bigskip':    '<br/>',
+        r'\medskip':    '<br/>',
         r'\-':          '',
+        r'{\euml}':     'ë',
     }
     result = raw
     for old, new in replacements.items():
@@ -67,6 +71,7 @@ def convert_expressions(raw: str) -> str:
     # Hiding
     for cmd in (r'\hidefromltoe', r'\idx', r'\ltoetitle', r'\ltoesubtitle', r'\ltoeauthor', r'\ltoeyear'):
         result = _eliminate_cmd(result, cmd)
+    result = _replace_cmd(result, r'\onlyforltoe', '', '')
 
     # cjhebrew: {\larger[n]\cjRL{...}} and \cjRL{...}
     result = convert_cjhebrew(result)

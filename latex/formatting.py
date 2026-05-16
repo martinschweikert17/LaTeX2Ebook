@@ -21,7 +21,7 @@ _BIBLEVERSEFORMAT = re.compile(
 )
 
 _ITEMIZE     = re.compile(r'\\begin\{itemize\}(.*?)\\end\{itemize\}',       re.DOTALL)
-_ENUMERATE   = re.compile(r'\\begin\{enumerate\}(.*?)\\end\{enumerate\}',   re.DOTALL)
+_ENUMERATE   = re.compile(r'\\begin\{enumerate\}(?:\[([^\]]*)\])?(.*?)\\end\{enumerate\}', re.DOTALL)
 _DESCRIPTION = re.compile(r'\\begin\{description\}(.*?)\\end\{description\}', re.DOTALL)
 _ITEM        = re.compile(r'[ \t]*\\item(?:\[[^\]]*\])?\s*')
 _ITEM_DESC   = re.compile(r'[ \t]*\\item(?:\[([^\]]*)\])?\s*')
@@ -37,10 +37,29 @@ _SPAN_COMMANDS = (
 )
 
 
-def _itemize_to_html(content: str, tag: str) -> str:
+_LABEL_TYPES = {
+    r'\alph':   'a',
+    r'\Alph':   'A',
+    r'\roman':  'i',
+    r'\Roman':  'I',
+    r'\arabic': '1',
+}
+
+
+def _enumerate_type(opt: str | None) -> str:
+    """Return the HTML type attribute value from a LaTeX enumerate optional arg."""
+    if not opt:
+        return ''
+    for latex_cmd, html_type in _LABEL_TYPES.items():
+        if latex_cmd in opt:
+            return f' type="{html_type}"'
+    return ''
+
+
+def _itemize_to_html(content: str, tag: str, type_attr: str = '') -> str:
     parts = _ITEM.split(content)
     items = ''.join(f'<li>{p.strip()}</li>' for p in parts if p.strip())
-    return f'<{tag}>{items}</{tag}>'
+    return f'<{tag}{type_attr}>{items}</{tag}>'
 
 
 def _description_to_html(content: str) -> str:
@@ -58,12 +77,55 @@ def _description_to_html(content: str) -> str:
     return '<dl>' + ''.join(entries) + '</dl>'
 
 
+def _replace_textcolor(text: str) -> str:
+    """Replace \\textcolor{color}{text} with <span style="color: color;">text</span>."""
+    trigger = r'\textcolor{'
+    if trigger not in text:
+        return text
+    out = []
+    i = 0
+    while i < len(text):
+        if text[i:i + len(trigger)] == trigger:
+            # parse first arg: color
+            j = i + len(trigger)
+            d = 1
+            while j < len(text) and d > 0:
+                if text[j] == '{':   d += 1
+                elif text[j] == '}': d -= 1
+                j += 1
+            color = text[i + len(trigger):j - 1]
+            # parse second arg: content
+            if j < len(text) and text[j] == '{':
+                k = j + 1
+                d = 1
+                while k < len(text) and d > 0:
+                    if text[k] == '{':   d += 1
+                    elif text[k] == '}': d -= 1
+                    k += 1
+                content = text[j + 1:k - 1]
+                out.append(f'<span style="color: {color};">{content}</span>')
+                i = k
+            else:
+                out.append(text[i])
+                i += 1
+        else:
+            out.append(text[i])
+            i += 1
+    return ''.join(out)
+
+
 def apply_formatting(text: str) -> str:
 
     text = _ITEMIZE.sub(lambda m: _itemize_to_html(m.group(1), 'ul'), text)
-    text = _ENUMERATE.sub(lambda m: _itemize_to_html(m.group(1), 'ol'), text)
+    text = _ENUMERATE.sub(
+        lambda m: _itemize_to_html(m.group(2), 'ol', _enumerate_type(m.group(1))), text
+    )
     text = _DESCRIPTION.sub(lambda m: _description_to_html(m.group(1)), text)
     text = _BIBLEVERSEFORMAT.sub(lambda m: f'<p class="quotation">{m.group(1)}</p>', text)
+
+    text = _replace_cmd(text, r'\textbf', '<strong>', '</strong>')
+    text = _replace_cmd(text, r'\textit', '<i>', '</i>')
+    text = _replace_textcolor(text)
 
     for cmd, cls in _SPAN_COMMANDS:
         text = _replace_cmd(text, f'\\{cmd}', f'<span class="{cls}">', '</span>')
