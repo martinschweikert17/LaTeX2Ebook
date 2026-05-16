@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="author" content="{author}" />
-  <meta name="generator" content="{programname}" />
+  <meta name="generator"    content="{programname}" />
+  {meta_description}
+  {meta_keywords}
 
   <!-- NOT FOR EBOOK: viewport meta tag is browser-specific and ignored or harmful in EPUB readers -->
   {viewport_meta}
@@ -36,13 +38,6 @@
       {body_background_css}
     }
 
-    /* NOT FOR EBOOK: @font-face with external URLs unreliable in EPUB readers;
-       embedded fonts via the EPUB manifest are the correct mechanism */
-    /* @font-face {
-      font-family: "MyFont";
-      src: url("https://example.com/myfont.woff2") format("woff2");
-    } */
-
     /* ------------------------------------------------------------------ */
     /* Headings                                                             */
     /* ------------------------------------------------------------------ */
@@ -62,33 +57,40 @@
     h4 { font-size: 1.0em; }
 
     /* ------------------------------------------------------------------ */
-    /* Book header                                                          */
+    /* Title page                                                           */
     /* ------------------------------------------------------------------ */
 
-    header {
-      text-align: center;
+    p.ebook-title {
       font-family: sans-serif;
-      margin-bottom: 3em;
-    }
-
-    header h1.ebook-title {
-      font-size: 1.728em;    /* \LARGE */
+      font-size: 1.8em;
+      font-weight: bold;
       text-align: center;
-      margin-bottom: 0.2em;
+      margin-top: 1em;
+      margin-bottom: 0.3em;
     }
 
     p.ebook-subtitle {
-      font-size: 1.44em;     /* \Large */
+      font-family: sans-serif;
+      font-size: 1.3em;
       font-style: italic;
       text-align: center;
       margin-top: 0;
-      margin-bottom: 1em;
+      margin-bottom: 0.8em;
     }
 
     p.ebook-author {
-      font-size: 1.44em;     /* \Large */
+      font-family: sans-serif;
+      font-size: 1.1em;
       text-align: center;
       margin-bottom: 0.3em;
+    }
+
+    p.ebook-year {
+      font-family: sans-serif;
+      font-size: 1.0em;
+      text-align: center;
+      color: #555;
+      margin-bottom: 2em;
     }
 
     hr.ebook-copyright-rule {
@@ -133,6 +135,29 @@
       text-indent: 0;
     }
 
+    ul, ol {
+      margin: 0.5em 0 0.8em 2em;
+      padding: 0;
+    }
+
+    li {
+      margin-bottom: 0.3em;
+    }
+
+    dl {
+      margin: 0.5em 0 0.8em 0;
+    }
+
+    dt {
+      font-weight: bold;
+      margin-top: 0.5em;
+    }
+
+    dd {
+      margin-left: 2em;
+      margin-bottom: 0.3em;
+    }
+
     /* ------------------------------------------------------------------ */
     /* Inline elements                                                      */
     /* ------------------------------------------------------------------ */
@@ -143,6 +168,12 @@
     span.longversionname { {longversionname_css} }
     span.transliteration { {transliteration_css} }
     span.verseemphasis { {verseemphasis_css} }
+
+    span.versenumber {
+      vertical-align: super;
+      font-size: 0.75em;
+      line-height: 0;       /* prevent super from expanding line spacing */
+    }
 
     /* NOT FOR EBOOK: text-shadow has very limited reader support */
     {dropcap_css}
@@ -260,11 +291,12 @@
 </head>
 <body>
 
-<header>
-  <h1 class="ebook-title">{title}</h1>
-{subtitle}  <p class="ebook-author">{author}</p>
-</header>
+{ebook_title}
+{ebook_subtitle}
 
+
+{ebook_author}
+<br/>
 {body}
 
 {copyright_block}

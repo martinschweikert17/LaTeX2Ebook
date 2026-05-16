@@ -53,7 +53,9 @@ def convert_expressions(raw: str) -> str:
         r'{\sz}':       cfg.sz,
         '---':          '&mdash;',
         '--':           '&ndash;',
+        r'\ldots':      '&hellip;',
         r'\,':          '&thinsp;',
+        r'\-':          '',
     }
     result = raw
     for old, new in replacements.items():
@@ -63,7 +65,7 @@ def convert_expressions(raw: str) -> str:
     result = _replace_enquote(result)
 
     # Hiding
-    for cmd in (r'\hidefromltoe', r'\idx'):
+    for cmd in (r'\hidefromltoe', r'\idx', r'\ltoetitle', r'\ltoesubtitle', r'\ltoeauthor', r'\ltoeyear'):
         result = _eliminate_cmd(result, cmd)
 
     # cjhebrew: {\larger[n]\cjRL{...}} and \cjRL{...}
@@ -81,6 +83,13 @@ def convert_expressions(raw: str) -> str:
         result,
     )
 
+    # Delete LaTeX expressions
+    _DELETE = (
+        r'\begin{document}',
+        r'\end{document}',
+    )
+    for expr in _DELETE:
+        result = result.replace(expr, '')
 
 
     if cfg.debug:

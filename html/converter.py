@@ -89,25 +89,24 @@ class HtmlConverter:
         self._logger.info("HTML written: %s", out_path)
         return out_path
 
-    # ------------------------------------------------------------------
-    # Private methods – DUMMY implementations
-    # Replace each method body with real conversion logic.
-    # ------------------------------------------------------------------
-
     def _build_page(self, raw: str, lang: str) -> str:
         cfg  = Config.get()
-        body = self._build_body(raw)
-        subtitle = (f'  <p class="ebook-subtitle">{cfg.ebook_subtitle}</p>\n'
-                    if cfg.ebook_subtitle else "")
-        viewport_meta   = '<meta name="viewport" content="width=device-width, initial-scale=1.0" />' if cfg.htmlonly else ""
-        reset_css       = "* { box-sizing: border-box; margin: 0; padding: 0; }"                     if cfg.htmlonly else ""
-        body_layout_css     = "max-width: 50em;\n      margin: 2em auto;" if cfg.htmlonly else ""
-        body_background_css = "background-color: #fafafa;" if cfg.htmlonly else ""
-        th_background_css   = "background-color: #eee;"        if cfg.htmlonly else ""
-        a_hover_css         = "a:hover { color: #005faf; }"             if cfg.htmlonly else ""
-        img_boxshadow_css   = "box-shadow: 0 2px 6px rgba(0,0,0,.3);"                        if cfg.htmlonly else ""
-        dropcap_css         = ".drop-cap::first-letter { text-shadow: 1px 1px 2px #888; }"  if cfg.htmlonly else ""
-        copyright_text = f"© {cfg.ebook_year} by {cfg.ebook_author}"
+        viewport_meta    = '<meta name="viewport" content="width=device-width, initial-scale=1.0" />' if cfg.htmlonly else ""
+        meta_description = (f'<meta name="description" content="{cfg.description}" />'
+                            if cfg.description else "")
+        meta_keywords    = (f'<meta name="keywords" content="{cfg.keywords}" />'
+                            if cfg.keywords else "")
+        reset_css           = "* { box-sizing: border-box; margin: 0; padding: 0; }" if cfg.htmlonly else ""
+        body_layout_css     = "max-width: 50em;\n      margin: 2em auto;"            if cfg.htmlonly else ""
+        body_background_css = "background-color: #fafafa;"                           if cfg.htmlonly else ""
+        th_background_css   = "background-color: #eee;"                              if cfg.htmlonly else ""
+        a_hover_css         = "a:hover { color: #005faf; }"                          if cfg.htmlonly else ""
+        img_boxshadow_css   = "box-shadow: 0 2px 6px rgba(0,0,0,.3);"               if cfg.htmlonly else ""
+        dropcap_css         = ".drop-cap::first-letter { text-shadow: 1px 1px 2px #888; }" if cfg.htmlonly else ""
+        ebook_title    = f'<p class="ebook-title">{cfg.title}</p>'       if cfg.htmlonly and cfg.title    else ""
+        ebook_subtitle = f'<p class="ebook-subtitle">{cfg.subtitle}</p>' if cfg.htmlonly and cfg.subtitle else ""
+        ebook_author   = f'<p class="ebook-author">{cfg.author}</p>'     if cfg.htmlonly and cfg.author   else ""
+        copyright_text  = f"© {cfg.year} by {cfg.author}"
         copyright_block = (
             f'<hr class="ebook-copyright-rule" />\n'
             f'<p class="ebook-copyright">{copyright_text}</p>'
@@ -120,25 +119,27 @@ class HtmlConverter:
         template = _TEMPLATE.read_text(encoding="utf-8")
         return (template
                 .replace("{viewport_meta}",       viewport_meta)
-                .replace("{reset_css}",          reset_css)
+                .replace("{meta_description}",    meta_description)
+                .replace("{meta_keywords}",       meta_keywords)
+                .replace("{reset_css}",           reset_css)
                 .replace("{body_layout_css}",     body_layout_css)
                 .replace("{body_background_css}", body_background_css)
                 .replace("{th_background_css}",   th_background_css)
                 .replace("{a_hover_css}",         a_hover_css)
                 .replace("{img_boxshadow_css}",   img_boxshadow_css)
                 .replace("{dropcap_css}",         dropcap_css)
-                .replace("{programname}",        cfg.programname)
-                .replace("{lang}",               lang)
-                .replace("{title}",              cfg.ebook_title)
-                .replace("{subtitle}",           subtitle)
-                .replace("{author}",             cfg.ebook_author)
-                .replace("{copyright_block}",   copyright_block)
+                .replace("{programname}",         cfg.programname)
+                .replace("{lang}",                lang)
+                .replace("{title}",               cfg.title)
+                .replace("{author}",              cfg.author)
+                .replace("{ebook_title}",         ebook_title)
+                .replace("{ebook_subtitle}",      ebook_subtitle)
+                .replace("{ebook_author}",        ebook_author)
+                .replace("{copyright_block}",     copyright_block)
                 .replace("{longversionname_css}", longversionname_css)
                 .replace("{transliteration_css}", transliteration_css)
-                .replace("{verseemphasis_css}",  verseemphasis_css)
-                .replace("{greekfontsize}",      cfg.greek_font_size)
-                .replace("{hebrewfontsize}",     cfg.hebrew_font_size)
-                .replace("{body}",               body))
+                .replace("{verseemphasis_css}",   verseemphasis_css)
+                .replace("{greekfontsize}",       cfg.greek_font_size)
+                .replace("{hebrewfontsize}",      cfg.hebrew_font_size)
+                .replace("{body}",                raw))
 
-    def _build_body(self, raw: str) -> str:
-        return raw

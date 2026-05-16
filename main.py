@@ -39,6 +39,7 @@ def setup_logging() -> logging.Logger:
     handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
 
     if cfg.log_file:
+        Path(cfg.log_file).parent.mkdir(parents=True, exist_ok=True)
         handlers.append(logging.FileHandler(cfg.log_file, encoding="utf-8"))
 
     logging.basicConfig(
@@ -99,12 +100,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Document language, e.g. DE or EN",
     )
     parser.add_argument(
-        "--ebook-year",
-        metavar="YEAR",
-        dest="ebook_year",
-        help="Publication year (default: current year)",
-    )
-    parser.add_argument(
         "--log-level",
         metavar="LEVEL",
         dest="log_level",
@@ -145,6 +140,10 @@ class Application:
 
         # Step 2 – Convert to HTML → write .html file to output_directory
         html_path = HtmlConverter().convert(raw)
+
+        if cfg.htmlonly:
+            self._logger.info("Done. Output: %s", html_path)
+            return 0
 
         # Step 3 – Build ebook from .html file → write ebook to output_directory
         ebook_path = EbookBuilder().build(html_path)

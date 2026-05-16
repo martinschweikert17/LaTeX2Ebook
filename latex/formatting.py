@@ -20,18 +20,49 @@ _BIBLEVERSEFORMAT = re.compile(
     re.DOTALL,
 )
 
+_ITEMIZE     = re.compile(r'\\begin\{itemize\}(.*?)\\end\{itemize\}',       re.DOTALL)
+_ENUMERATE   = re.compile(r'\\begin\{enumerate\}(.*?)\\end\{enumerate\}',   re.DOTALL)
+_DESCRIPTION = re.compile(r'\\begin\{description\}(.*?)\\end\{description\}', re.DOTALL)
+_ITEM        = re.compile(r'[ \t]*\\item(?:\[[^\]]*\])?\s*')
+_ITEM_DESC   = re.compile(r'[ \t]*\\item(?:\[([^\]]*)\])?\s*')
+
 _SPAN_COMMANDS = (
     # (latex-command, css-class)
     # css-class may differ from the command name so that multiple commands
     # can share the same CSS rule.
     ('transliteration', 'transliteration'),
     ('verseemphasis',   'verseemphasis'),
+    ('versenumber',     'versenumber'),
     ('quotegreek',      'greek'),
 )
 
 
+def _itemize_to_html(content: str, tag: str) -> str:
+    parts = _ITEM.split(content)
+    items = ''.join(f'<li>{p.strip()}</li>' for p in parts if p.strip())
+    return f'<{tag}>{items}</{tag}>'
+
+
+def _description_to_html(content: str) -> str:
+    # re.split with one capturing group yields [pre, label0, text0, label1, text1, ...]
+    parts   = _ITEM_DESC.split(content)
+    labels  = parts[1::2]   # captured label or None
+    texts   = parts[2::2]   # item content
+    entries = []
+    for label, text in zip(labels, texts):
+        text = text.strip()
+        if label is not None:
+            entries.append(f'<dt>{label}</dt><dd>{text}</dd>')
+        else:
+            entries.append(f'<dd>{text}</dd>')
+    return '<dl>' + ''.join(entries) + '</dl>'
+
+
 def apply_formatting(text: str) -> str:
 
+    text = _ITEMIZE.sub(lambda m: _itemize_to_html(m.group(1), 'ul'), text)
+    text = _ENUMERATE.sub(lambda m: _itemize_to_html(m.group(1), 'ol'), text)
+    text = _DESCRIPTION.sub(lambda m: _description_to_html(m.group(1)), text)
     text = _BIBLEVERSEFORMAT.sub(lambda m: f'<p class="quotation">{m.group(1)}</p>', text)
 
     for cmd, cls in _SPAN_COMMANDS:

@@ -104,6 +104,7 @@ class Config:
         instance._load_cli(args)
         if instance._data["target"] == "html":
             instance._data["htmlonly"] = True
+        instance._load_lang_section(ini_path)
 
         cls._instance = instance
         return instance
@@ -137,20 +138,22 @@ class Config:
         self._data = {
 
             # "Constants"
-            "ebookauthor": "Martin Schweikert",
             "programname": PROGRAM_NAME,
 
             # Variables
+            "author":          "Martin Schweikert",
             "debug":           False,
-            "ebooksubtitle":    "",
-            "ebooktitle":       "",
-            "ebookyear":        str(date.today().year),
+            "description":     "",
+            "keywords":        "",
+            "subtitle":        "",
+            "title":           "",
+            "year":            str(date.today().year),
             "greekfontsize":   "1.05em",
             "hebrewfontsize":  "1.2em",
             "htmlonly":         False,
             "input_directory": "",
             "input_file":      "",
-            "language":        "",
+            "language":        "DE",
             "log_file":        "",       # empty = stdout only
             "log_level":       "INFO",
             "output_directory": "",      # empty = <input_directory>/L2E
@@ -160,6 +163,7 @@ class Config:
             "longversionname": "font-style: italic;",
             "transliteration": "font-style: italic;",
             "verseemphasis":   "font-weight: bold;",
+            "biblerefstyle":   "LThK",
         }
 
     # ------------------------------------------------------------------
@@ -175,10 +179,6 @@ class Config:
 
         mapping = {
             # (ini-section, ini-key) → (internal key, type)
-            ("EBOOK", "EbookAuthor"): ("ebookauthor", str),
-            ("EBOOK", "EbookSubtitle"): ("ebooksubtitle", str),
-            ("EBOOK", "EbookTitle"): ("ebooktitle", str),
-            ("EBOOK", "EbookYear"): ("ebookyear", str),
             ("EBOOK", "sz"): ("sz", str),
             ("EBOOK", "szquoted"): ("szquoted", str),
             ("EBOOK", "LongVersionName"): ("longversionname", str),
@@ -209,7 +209,6 @@ class Config:
     def _load_cli(self, args: argparse.Namespace) -> None:
         cli_mapping = {
             # argparse attribute  → (internal key, type)
-            "ebook_year":       ("ebookyear",        str),
             "input_directory":  ("input_directory",  str),
             "input_file":       ("input_file",       str),
             "output_directory": ("output_directory", str),
@@ -222,6 +221,26 @@ class Config:
             value = getattr(args, attr, None)
             if value is not None:
                 self._data[internal_key] = self._cast(value, cast)
+
+    # ------------------------------------------------------------------
+    # Layer 4 – Language-specific INI section (after CLI so language is final)
+    # ------------------------------------------------------------------
+
+    def _load_lang_section(self, ini_path: Path) -> None:
+        parser = configparser.ConfigParser()
+        parser.read(ini_path, encoding="utf-8")
+        lang_section = f"LANG_{self._data['language'].upper()}"
+        if parser.has_section(lang_section):
+            for key, internal_key in (
+                ("Author",      "author"),
+                ("Description", "description"),
+                ("Keywords",    "keywords"),
+                ("Subtitle",    "subtitle"),
+                ("Title",       "title"),
+                ("Year",        "year"),
+            ):
+                if parser.has_option(lang_section, key):
+                    self._data[internal_key] = parser.get(lang_section, key)
 
     # ------------------------------------------------------------------
     # Helper – type conversion
@@ -273,6 +292,14 @@ class Config:
         return self._data["language"]
 
     @property
+    def description(self) -> str:
+        return self._data["description"]
+
+    @property
+    def keywords(self) -> str:
+        return self._data["keywords"]
+
+    @property
     def target(self) -> str:
         return self._data["target"]
 
@@ -294,20 +321,20 @@ class Config:
         return self._data["debug"]
 
     @property
-    def ebook_title(self) -> str:
-        return self._data["ebooktitle"]
+    def title(self) -> str:
+        return self._data["title"]
 
     @property
-    def ebook_author(self) -> str:
-        return self._data["ebookauthor"]
+    def subtitle(self) -> str:
+        return self._data["subtitle"]
 
     @property
-    def ebook_subtitle(self) -> str:
-        return self._data["ebooksubtitle"]
+    def author(self) -> str:
+        return self._data["author"]
 
     @property
-    def ebook_year(self) -> str:
-        return self._data["ebookyear"]
+    def year(self) -> str:
+        return self._data["year"]
 
     @property
     def sz(self) -> str:
@@ -341,6 +368,10 @@ class Config:
     def verse_emphasis(self) -> str:
         return self._data["verseemphasis"]
 
+    @property
+    def biblerefstyle(self) -> str:
+        return self._data["biblerefstyle"]
+
     def __repr__(self) -> str:
         return (
             f"Config("
@@ -352,12 +383,14 @@ class Config:
             f"tex_input={self.tex_input}, "
             f"output_directory={self.output_directory}, "
             f"language={self.language!r}, "
+            f"description={self.description!r}, "
+            f"keywords={self.keywords!r}, "
             f"target={self.target!r}, "
             f"htmlonly={self.htmlonly}, "
-            f"ebook_title={self.ebook_title!r}, "
-            f"ebook_author={self.ebook_author!r}, "
-            f"ebook_subtitle={self.ebook_subtitle!r}, "
-            f"ebook_year={self.ebook_year!r}, "
+            f"title={self.title!r}, "
+            f"subtitle={self.subtitle!r}, "
+            f"author={self.author!r}, "
+            f"year={self.year!r}, "
             f"log_level={self.log_level!r}, "
             f"log_file={self.log_file!r}, "
             f"debug={self.debug}, "
