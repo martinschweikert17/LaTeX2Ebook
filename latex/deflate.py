@@ -51,10 +51,61 @@ _SKIP_BLOCK = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 
-_LANG_BLOCK = re.compile(
-    r"\\ifbool\{LANG_([A-Z]{2})\}\{(.*?)\}%LANG_\1",
-    re.DOTALL,
-)
+_LANG_OPEN = re.compile(r'\\ifbool\{LANG_([A-Z]{2})\}\s*\{')
+# Optional closing comment on the same line: }%LANG_XX  or  }%LANG_XX BLOCK 57  etc.
+_LANG_CLOSE = re.compile(r'[^\S\n]*%LANG_[A-Z]{2}[^\n]*')
+
+
+def _deflate_lang(text: str, lang: str) -> str:
+    """
+    Brace-counting replacement for \\ifbool{LANG_XX}{...}%LANG_XX blocks.
+
+    The block always ends at the brace-counted depth-0 closing '}'.
+    The trailing %LANG_XX comment (with any extra text on that line) is
+    optional — if present it is consumed; if absent the '}' alone closes
+    the block.  Nesting is handled correctly because inner closing braces
+    increment/decrement the depth counter and are never mistaken for the
+    outer closing brace.
+    """
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        m = _LANG_OPEN.search(text, i)
+        if m is None:
+            out.append(text[i:])
+            break
+
+        # Copy everything before this match verbatim
+        out.append(text[i:m.start()])
+        block_lang = m.group(1)
+
+        # Count braces to find the matching closing '}'
+        depth = 1
+        j = m.end()  # first char inside the block
+        content_start = j
+
+        while j < n and depth > 0:
+            ch = text[j]
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+            j += 1
+        # j now points one past the closing '}'
+
+        content = text[content_start:j - 1]
+
+        # Consume optional same-line closing comment: %LANG_XX[rest of line]
+        close_m = _LANG_CLOSE.match(text, j)
+        end = close_m.end() if close_m else j
+
+        if block_lang == lang:
+            out.append(_deflate_lang(content, lang))
+
+        i = end
+
+    return ''.join(out)
 
 
 def deflate(raw: str) -> str:
@@ -78,10 +129,7 @@ def deflate(raw: str) -> str:
 
     # 2. Remove language-specific blocks that do not match the configured language
 
-    def _replace_lang(m: re.Match) -> str:
-        return m.group(2) if m.group(1) == lang else ""
-
-    result = _LANG_BLOCK.sub(_replace_lang, result)
+    result = _deflate_lang(result, lang)
 
     # Kosmetik: Mehrere aufeinanderfolgende Zeilenumbrüche auf einen reduzieren
 

@@ -55,6 +55,13 @@ from pathlib import Path
 
 PROGRAM_NAME = "latex2ebook"
 
+_SZ_MAP: dict[str, tuple[str, str]] = {
+    #                sz    szquoted
+    "normal":     ("ß",  "ß"),
+    "aggressive": ("ss", "ß"),
+    "radical":    ("ss", "ss"),
+}
+
 
 class Config:
     """
@@ -105,6 +112,7 @@ class Config:
         if instance._data["target"] == "html":
             instance._data["htmlonly"] = True
         instance._load_lang_section(ini_path)
+        instance._validate_paths()
 
         cls._instance = instance
         return instance
@@ -158,12 +166,13 @@ class Config:
             "log_level":       "INFO",
             "output_directory": "",      # empty = <input_directory>/L2E
             "target":          "epub",  # epub | html
-            "sz":              "ß",
-            "szquoted":        "ß",
+            "szmode":          "normal",
             "longversionname": "font-style: italic;",
             "transliteration": "font-style: italic;",
             "verseemphasis":   "font-weight: bold;",
             "biblerefstyle":   "LThK",
+            "translations":    "",
+            "jhwh":            "Jahwe",
         }
 
     # ------------------------------------------------------------------
@@ -179,8 +188,7 @@ class Config:
 
         mapping = {
             # (ini-section, ini-key) → (internal key, type)
-            ("EBOOK", "sz"): ("sz", str),
-            ("EBOOK", "szquoted"): ("szquoted", str),
+            ("EBOOK", "SZMode"):         ("szmode",          str),
             ("EBOOK", "LongVersionName"): ("longversionname", str),
             ("EBOOK", "Transliteration"): ("transliteration", str),
             ("EBOOK", "VerseEmphasis"): ("verseemphasis", str),
@@ -194,7 +202,9 @@ class Config:
             ("LOGGING", "LogLevel"): ("log_level", str),
             ("PATHS", "InputDirectory"): ("input_directory", str),
             ("PATHS", "InputFile"): ("input_file", str),
-            ("PATHS", "OutputDirectory"): ("output_directory", str),
+            ("PATHS", "OutputDirectory"):  ("output_directory", str),
+            ("PATHS", "Translations"):     ("translations",     str),
+            ("EBOOK", "YHWH"):             ("jhwh",             str),
         }
 
         for (section, key), (internal_key, cast) in mapping.items():
@@ -243,6 +253,31 @@ class Config:
                     self._data[internal_key] = parser.get(lang_section, key)
 
     # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    def _validate_paths(self) -> None:
+        for key, label in (
+            ("translations", "Translations"),
+        ):
+            raw = self._data[key]
+            if not raw:
+                raise FileNotFoundError(
+                    f"[PATHS] {label} is not configured in the INI file."
+                )
+            path = Path(raw).expanduser()
+            if not path.exists():
+                raise FileNotFoundError(
+                    f"[PATHS] {label}: file not found: {path}"
+                )
+        szmode = self._data["szmode"]
+        if szmode not in _SZ_MAP:
+            raise ValueError(
+                f"[EBOOK] SZMode = {szmode!r} ist ungültig. "
+                f"Erlaubte Werte: {list(_SZ_MAP)}"
+            )
+
     # Helper – type conversion
     # ------------------------------------------------------------------
 
@@ -265,7 +300,7 @@ class Config:
 
     @property
     def input_directory(self) -> Path:
-        return Path(self._data["input_directory"])
+        return Path(self._data["input_directory"]).expanduser()
 
     @property
     def input_file(self) -> str:
@@ -337,12 +372,16 @@ class Config:
         return self._data["year"]
 
     @property
+    def szmode(self) -> str:
+        return self._data["szmode"]
+
+    @property
     def sz(self) -> str:
-        return self._data["sz"]
+        return _SZ_MAP[self._data["szmode"]][0]
 
     @property
     def szquoted(self) -> str:
-        return self._data["szquoted"]
+        return _SZ_MAP[self._data["szmode"]][1]
 
     @property
     def programname(self) -> str:
@@ -372,6 +411,17 @@ class Config:
     def biblerefstyle(self) -> str:
         return self._data["biblerefstyle"]
 
+    @property
+    def jhwh(self) -> str:
+        return self._data["jhwh"]
+
+    @property
+    def translations(self) -> Path:
+        raw = self._data["translations"]
+        if raw:
+            return Path(raw).expanduser()
+        return Path(__file__).parent / "data" / "übersetzungen.tex"
+
     def __repr__(self) -> str:
         return (
             f"Config("
@@ -394,6 +444,6 @@ class Config:
             f"log_level={self.log_level!r}, "
             f"log_file={self.log_file!r}, "
             f"debug={self.debug}, "
-            f"sz={self.sz!r}, "
-            f"szquoted={self.szquoted!r})"
+            f"szmode={self.szmode!r}, "
+            f"jhwh={self.jhwh!r})"
         )

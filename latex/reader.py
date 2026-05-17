@@ -36,6 +36,7 @@ from latex.decomment import decomment
 from latex.deflate import deflate
 from latex.expressions import build_paragraphs, convert_expressions
 from latex.formatting import apply_formatting
+from latex.personal_settings import apply_personal_commands, build_jhwh_commands
 
 
 class LatexReader:
@@ -72,6 +73,7 @@ class LatexReader:
 
         raw = deflate(path.read_text(encoding="utf-8"))
         raw = decomment(raw)
+        raw = apply_personal_commands(raw, build_jhwh_commands())
         raw = convert_bibleref(raw)
         raw = convert_expressions(raw)
         raw = apply_formatting(raw)

@@ -30,7 +30,14 @@ from latex.cjhebrew import convert_cjhebrew
 from latex.formatting import _eliminate_cmd, _replace_cmd
 
 _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.expressions")
-_BIBLE_NAMES = load_bible_names()
+_BIBLE_NAMES: dict[str, str] | None = None
+
+
+def _bible_names() -> dict[str, str]:
+    global _BIBLE_NAMES
+    if _BIBLE_NAMES is None:
+        _BIBLE_NAMES = load_bible_names()
+    return _BIBLE_NAMES
 
 
 def convert_expressions(raw: str) -> str:
@@ -84,7 +91,7 @@ def convert_expressions(raw: str) -> str:
     result = _replace_cmd(result, r'\biblename', '', '')
     result = re.sub(
         r'\\longbiblename[{]([^}]+)[}]',
-        lambda m: f'<span class="longversionname">{_BIBLE_NAMES.get(m.group(1), f"UNKNOWN: {m.group(1)}")}</span>',
+        lambda m: f'<span class="longversionname">{_bible_names().get(m.group(1), f"UNKNOWN: {m.group(1)}")}</span>',
         result,
     )
 
@@ -95,6 +102,9 @@ def convert_expressions(raw: str) -> str:
     )
     for expr in _DELETE:
         result = result.replace(expr, '')
+
+    result = re.sub(r'\\usepackage(?:\[[^\]]*\])?\{[^}]*\}', '', result)
+    result = re.sub(r'\\input\{[^}]*\}', '', result)
 
 
     if cfg.debug:

@@ -1,0 +1,300 @@
+Gn,LthK,Gen,Genesis
+Ex,LthK,Ex,Exodus
+Lv,LthK,Lev,Leviticus
+Nb,LthK,Num,Numeri
+Dt,LthK,Dtn,Deuteronomium
+Jos,LthK,Jos,Josua
+Jg,LthK,Ri,Richter
+Rt,LthK,Rut,Rut
+IS,LthK,1 Sam,1. Samuel
+IIS,LthK,2 Sam,2. Samuel
+IK,LthK,1 Kön,1. Könige
+IIK,LthK,2 Kön,2. Könige
+ICh,LthK,1 Chr,1. Chronik
+IICh,LthK,2 Chr,2. Chronik
+Ezr,LthK,Esra,Esra
+Ne,LthK,Neh,Nehemia
+Est,LthK,Est,Ester
+Jb,LthK,Ijob,Ijob
+Ps,LthK,Psalm,Psalm
+Pr,LthK,Spr,Sprichwörter
+Qo,LthK,Koh,Kohelet
+Sg,LthK,Hld,Das Hohelied
+Is,LthK,Jes,Jesaja
+Jr,LthK,Jer,Jeremia
+Lm,LthK,Klgl,Klagelieder
+Ezk,LthK,Ez,Ezechiel
+Dn,LthK,Dan,Daniel
+Ho,LthK,Hos,Hosea
+Jl,LthK,Joel,Joel
+Am,LthK,Am,Amos
+Ob,LthK,Obd,Obadja
+Jon,LthK,Jona,Jona
+Mi,LthK,Mi,Micha
+Na,LthK,Nah,Nahum
+Hab,LthK,Hab,Habakuk
+Zp,LthK,Zef,Zefanja
+Hg,LthK,Hag,Haggai
+Zc,LthK,Sach,Sacharja
+Ml,LthK,Mal,Maleachi
+Mt,LthK,Mt,Matthäus
+Mk,LthK,Mk,Markus
+Lk,LthK,Lk,Lukas
+Jn,LthK,Joh,Johannes
+Acts,LthK,Apg,Apostelgeschichte
+Rm,LthK,Röm,Römer
+ICo,LthK,1 Kor,1. Korinther
+IICo,LthK,2 Kor,2. Korinther
+Ga,LthK,Gal,Galater
+Ep,LthK,Eph,Epheser
+Ph,LthK,Phil,Philipper
+Col,LthK,Kol,Kolosser
+ITh,LthK,1 Thess,1. Thessalonicher
+IITh,LthK,2 Thess,2. Thessalonicher
+ITm,LthK,1 Tim,1. Timotheus
+IITm,LthK,2 Tim,2. Timotheus
+Tt,LthK,Tit,Titus
+Phm,LthK,Phlm,Philemon
+Heb,LthK,Hebr,Hebräer
+Jm,LthK,Jak,Jakobus
+IP,LthK,1 Petr,1. Petrus
+IIP,LthK,2 Petr,2. Petrus
+IJn,LthK,1 Joh,1. Johannes
+IIJn,LthK,2 Joh,2. Johannes
+IIIJohn,LthK,3 Joh,3. Johannes
+Jude,LthK,Jud,Judas
+Rv,LthK,Offb,Offenbarung
+IEsd,LthK,1 Esdras,1 Esdras
+IIEsd,LthK,2 Esdras,2 Esdras
+Tb,LthK,Tob,Tobit
+Jdt,LthK,Jdt,Judit
+IM,LthK,1 Makk,1. Makkabäer
+IIM,LthK,2 Makk,2. Makkabäer
+Ws,LthK,Weish,Weisheit
+Si,LthK,Sir,Jesus Sirach
+Ba,LthK,Bar,Baruch
+Gn,Lutherbibel,1.Mose,1. Mose
+Ex,Lutherbibel,2.Mose,2. Mose
+Lv,Lutherbibel,3.Mose,3. Mose
+Nb,Lutherbibel,4.Mose,4. Mose
+Dt,Lutherbibel,5.Mose,5. Mose
+Jos,Lutherbibel,Jos,Josua
+Jg,Lutherbibel,Ri,Richter
+Rt,Lutherbibel,Rut,Rut
+IS,Lutherbibel,1.Sam,1. Samuel
+IIS,Lutherbibel,2.Sam,2. Samuel
+IK,Lutherbibel,1.Kön,1. Könige
+IIK,Lutherbibel,2.Kön,2. Könige
+ICh,Lutherbibel,1.Chr,1. Chronik
+IICh,Lutherbibel,2.Chr,2. Chronik
+Ezr,Lutherbibel,Esr,Esra
+Ne,Lutherbibel,Neh,Nehemia
+Est,Lutherbibel,Est,Ester
+Jb,Lutherbibel,Hiob,Hiob
+Ps,Lutherbibel,Psalm,Psalm
+Pr,Lutherbibel,Spr,Sprüche
+Qo,Lutherbibel,Pred,Prediger
+Sg,Lutherbibel,Hld,Hoheslied
+Is,Lutherbibel,Jes,Jesaja
+Jr,Lutherbibel,Jer,Jeremia
+Lm,Lutherbibel,Klgl,Klagelieder
+Ezk,Lutherbibel,Hes,Hesekiel
+Dn,Lutherbibel,Dan,Daniel
+Ho,Lutherbibel,Hos,Hosea
+Jl,Lutherbibel,Joel,Joel
+Am,Lutherbibel,Am,Amos
+Ob,Lutherbibel,Obd,Obadja
+Jon,Lutherbibel,Jona,Jona
+Mi,Lutherbibel,Mi,Micha
+Na,Lutherbibel,Nah,Nahum
+Hab,Lutherbibel,Hab,Habakuk
+Zp,Lutherbibel,Zef,Zefanja
+Hg,Lutherbibel,Hag,Haggai
+Zc,Lutherbibel,Sach,Sacharja
+Ml,Lutherbibel,Mal,Maleachi
+Mt,Lutherbibel,Mt,Matthäus
+Mk,Lutherbibel,Mk,Markus
+Lk,Lutherbibel,Lk,Lukas
+Jn,Lutherbibel,Joh,Johannes
+Acts,Lutherbibel,Apg,Apostelgeschichte
+Rm,Lutherbibel,Röm,Römer
+ICo,Lutherbibel,1.Kor,1. Korinther
+IICo,Lutherbibel,2.Kor,2. Korinther
+Ga,Lutherbibel,Gal,Galater
+Ep,Lutherbibel,Eph,Epheser
+Ph,Lutherbibel,Phil,Philipper
+Col,Lutherbibel,Kol,Kolosser
+ITh,Lutherbibel,1.Thess,1. Thessalonicher
+IITh,Lutherbibel,2.Thess,2. Thessalonicher
+ITm,Lutherbibel,1.Tim,1. Timotheus
+IITm,Lutherbibel,2.Tim,2. Timotheus
+Tt,Lutherbibel,Tit,Titus
+Phm,Lutherbibel,Phlm,Philemon
+Heb,Lutherbibel,Hebr,Hebräer
+Jm,Lutherbibel,Jak,Jakobus
+IP,Lutherbibel,1.Petr,1. Petrus
+IIP,Lutherbibel,2.Petr,2. Petrus
+IJn,Lutherbibel,1.Joh,1. Johannes
+IIJn,Lutherbibel,2.Joh,2. Johannes
+IIIJohn,Lutherbibel,3.Joh,3. Johannes
+Jude,Lutherbibel,Jud,Judas
+Rv,Lutherbibel,Offb,Offenbarung
+IEsd,Lutherbibel,1 Esdras,1 Esdras
+IIEsd,Lutherbibel,2 Esdras,2 Esdras
+Tb,Lutherbibel,Tob,Tobias
+Jdt,Lutherbibel,Jdt,Judit
+IM,Lutherbibel,1.Makk,1. Makkabäer
+IIM,Lutherbibel,2.Makk,2. Makkabäer
+Ws,Lutherbibel,Weish,Weisheit
+Si,Lutherbibel,Sir,Sirach
+Ba,Lutherbibel,Bar,Baruch
+Gn,Einheitsuebersetzung,Gen,Genesis
+Ex,Einheitsuebersetzung,Ex,Exodus
+Lv,Einheitsuebersetzung,Lev,Levitikus
+Nb,Einheitsuebersetzung,Num,Numeri
+Dt,Einheitsuebersetzung,Dtn,Deuteronomium
+Jos,Einheitsuebersetzung,Jos,Josua
+Jg,Einheitsuebersetzung,Ri,Richter
+Rt,Einheitsuebersetzung,Rut,Rut
+IS,Einheitsuebersetzung,1 Sam,1. Samuel
+IIS,Einheitsuebersetzung,2 Sam,2. Samuel
+IK,Einheitsuebersetzung,1 Kön,1. Könige
+IIK,Einheitsuebersetzung,2 Kön,2. Könige
+ICh,Einheitsuebersetzung,1 Chr,1. Chronik
+IICh,Einheitsuebersetzung,2 Chr,2. Chronik
+Ezr,Einheitsuebersetzung,Esra,Esra
+Ne,Einheitsuebersetzung,Neh,Nehemia
+Est,Einheitsuebersetzung,Est,Ester
+Jb,Einheitsuebersetzung,Ijob,Ijob
+Ps,Einheitsuebersetzung,Psalm,Psalm
+Pr,Einheitsuebersetzung,Spr,Sprichwörter
+Qo,Einheitsuebersetzung,Koh,Kohelet
+Sg,Einheitsuebersetzung,Hld,Hoheslied
+Is,Einheitsuebersetzung,Jes,Jesaja
+Jr,Einheitsuebersetzung,Jer,Jeremia
+Lm,Einheitsuebersetzung,Klgl,Klagelieder
+Ezk,Einheitsuebersetzung,Ez,Ezechiel
+Dn,Einheitsuebersetzung,Dan,Daniel
+Ho,Einheitsuebersetzung,Hos,Hosea
+Jl,Einheitsuebersetzung,Joël,Joël
+Am,Einheitsuebersetzung,Am,Amos
+Ob,Einheitsuebersetzung,Obd,Obadja
+Jon,Einheitsuebersetzung,Jona,Jona
+Mi,Einheitsuebersetzung,Mi,Micha
+Na,Einheitsuebersetzung,Nah,Nahum
+Hab,Einheitsuebersetzung,Hab,Habakuk
+Zp,Einheitsuebersetzung,Zef,Zefanja
+Hg,Einheitsuebersetzung,Hag,Haggai
+Zc,Einheitsuebersetzung,Sach,Sacharja
+Ml,Einheitsuebersetzung,Mal,Maleachi
+Mt,Einheitsuebersetzung,Mt,Matthäus
+Mk,Einheitsuebersetzung,Mk,Markus
+Lk,Einheitsuebersetzung,Lk,Lukas
+Jn,Einheitsuebersetzung,Joh,Johannes
+Acts,Einheitsuebersetzung,Apg,Apostelgeschichte
+Rm,Einheitsuebersetzung,Röm,Römer
+ICo,Einheitsuebersetzung,1 Kor,1. Korinther
+IICo,Einheitsuebersetzung,2 Kor,2. Korinther
+Ga,Einheitsuebersetzung,Gal,Galater
+Ep,Einheitsuebersetzung,Eph,Epheser
+Ph,Einheitsuebersetzung,Phil,Philipper
+Col,Einheitsuebersetzung,Kol,Kolosser
+ITh,Einheitsuebersetzung,1 Thess,1. Thessalonicher
+IITh,Einheitsuebersetzung,2 Thess,2. Thessalonicher
+ITm,Einheitsuebersetzung,1 Tim,1. Timotheus
+IITm,Einheitsuebersetzung,2 Tim,2. Timotheus
+Tt,Einheitsuebersetzung,Tit,Titus
+Phm,Einheitsuebersetzung,Phlm,Philemon
+Heb,Einheitsuebersetzung,Hebr,Hebräer
+Jm,Einheitsuebersetzung,Jak,Jakobus
+IP,Einheitsuebersetzung,1 Petr,1. Petrus
+IIP,Einheitsuebersetzung,2 Petr,2. Petrus
+IJn,Einheitsuebersetzung,1 Joh,1. Johannes
+IIJn,Einheitsuebersetzung,2 Joh,2. Johannes
+IIIJohn,Einheitsuebersetzung,3 Joh,3. Johannes
+Jude,Einheitsuebersetzung,Jud,Judas
+Rv,Einheitsuebersetzung,Offb,Offenbarung
+IEsd,Einheitsuebersetzung,1 Esdras,1 Esdras
+IIEsd,Einheitsuebersetzung,2 Esdras,2 Esdras
+Tb,Einheitsuebersetzung,Tob,Tobit
+Jdt,Einheitsuebersetzung,Jdt,Judit
+IM,Einheitsuebersetzung,1 Makk,1. Makkabäer
+IIM,Einheitsuebersetzung,2 Makk,2. Makkabäer
+Ws,Einheitsuebersetzung,Weish,Weisheit
+Si,Einheitsuebersetzung,Sir,Jesus Sirach
+Ba,Einheitsuebersetzung,Bar,Baruch
+Gn,jerusalem,Gn,Gn
+Ex,jerusalem,Ex,Ex
+Lv,jerusalem,Lv,Lv
+Nb,jerusalem,Nb,Nb
+Dt,jerusalem,Dt,Dt
+Jos,jerusalem,Jos,Jos
+Jg,jerusalem,Jg,Jg
+Rt,jerusalem,Rt,Rt
+IS,jerusalem,1S,1S
+IIS,jerusalem,2S,2S
+IK,jerusalem,1 K,1 K
+IIK,jerusalem,2 K,2 K
+ICh,jerusalem,1 Ch,1 Ch
+IICh,jerusalem,2 Ch,2 Ch
+Ezr,jerusalem,Ezr,Ezr
+Ne,jerusalem,Ne,Ne
+Est,jerusalem,Est,Est
+Jb,jerusalem,Jb,Jb
+Ps,jerusalem,Ps,Ps
+Pr,jerusalem,Pr,Pr
+Qo,jerusalem,Qo,Qo
+Sg,jerusalem,Sg,Sg
+Is,jerusalem,Is,Is
+Jr,jerusalem,Jr,Jr
+Lm,jerusalem,Lm,Lm
+Ezk,jerusalem,Ezk,Ezk
+Dn,jerusalem,Dn,Dn
+Ho,jerusalem,Ho,Ho
+Jl,jerusalem,Jl,Jl
+Am,jerusalem,Am,Am
+Ob,jerusalem,Ob,Ob
+Jon,jerusalem,Jon,Jon
+Mi,jerusalem,Mi,Mi
+Na,jerusalem,Na,Na
+Hab,jerusalem,Hab,Hab
+Zp,jerusalem,Zp,Zp
+Hg,jerusalem,Hg,Hg
+Zc,jerusalem,Zc,Zc
+Ml,jerusalem,Ml,Ml
+Mt,jerusalem,Mt,Mt
+Mk,jerusalem,Mk,Mk
+Lk,jerusalem,Lk,Lk
+Jn,jerusalem,Jn,Jn
+Acts,jerusalem,Ac,Ac
+Rm,jerusalem,Rm,Rm
+ICo,jerusalem,1 Co,1 Co
+IICo,jerusalem,2 Co,2 Co
+Ga,jerusalem,Ga,Ga
+Ep,jerusalem,Ep,Ep
+Ph,jerusalem,Ph,Ph
+Col,jerusalem,Col,Col
+ITh,jerusalem,1 Th,1 Th
+IITh,jerusalem,2 Th,2 Th
+ITm,jerusalem,1 Tm,1 Tm
+IITm,jerusalem,2 Tm,2 Tm
+Tt,jerusalem,Tt,Tt
+Phm,jerusalem,Phm,Phm
+Heb,jerusalem,Heb,Heb
+Jm,jerusalem,Jm,Jm
+IP,jerusalem,1 P,1 P
+IIP,jerusalem,2 P,2 P
+IJn,jerusalem,1 Jn,1 Jn
+IIJn,jerusalem,2 Jn,2 Jn
+IIIJohn,jerusalem,3 Jn,3 Jn
+Jude,jerusalem,Jude,Jude
+Rv,jerusalem,Rv,Rv
+IEsd,jerusalem,1 Esdras,1 Esdras
+IIEsd,jerusalem,2 Esdras,2 Esdras
+Tb,jerusalem,Tb,Tb
+Jdt,jerusalem,Jdt,Jdt
+IM,jerusalem,1M,1M
+IIM,jerusalem,2M,2M
+Ws,jerusalem,Ws,Ws
+Si,jerusalem,Si,Si
+Ba,jerusalem,Ba,Ba
