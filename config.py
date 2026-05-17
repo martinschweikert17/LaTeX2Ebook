@@ -167,9 +167,10 @@ class Config:
             "output_directory": "",      # empty = <input_directory>/L2E
             "target":          "epub",  # epub | html
             "szmode":          "normal",
-            "longversionname": "font-style: italic;",
-            "transliteration": "font-style: italic;",
-            "verseemphasis":   "font-weight: bold;",
+            "longversionname":   "font-style: italic;",
+            "transliteration":   "font-style: italic;",
+            "verseemphasis":     "font-weight: bold;",
+            "personnameformat":  "text-transform: uppercase; font-size: 85%;",
             "biblerefstyle":   "LThK",
             "translations":    "",
             "jhwh":            "Jahwe",
@@ -183,7 +184,7 @@ class Config:
         if not ini_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {ini_path}")
 
-        parser = configparser.ConfigParser()
+        parser = configparser.ConfigParser(interpolation=None)
         parser.read(ini_path, encoding="utf-8")
 
         mapping = {
@@ -205,6 +206,7 @@ class Config:
             ("PATHS", "OutputDirectory"):  ("output_directory", str),
             ("PATHS", "Translations"):     ("translations",     str),
             ("EBOOK", "YHWH"):             ("jhwh",             str),
+            ("EBOOK", "PersonNameFormat"): ("personnameformat",  str),
         }
 
         for (section, key), (internal_key, cast) in mapping.items():
@@ -237,7 +239,7 @@ class Config:
     # ------------------------------------------------------------------
 
     def _load_lang_section(self, ini_path: Path) -> None:
-        parser = configparser.ConfigParser()
+        parser = configparser.ConfigParser(interpolation=None)
         parser.read(ini_path, encoding="utf-8")
         lang_section = f"LANG_{self._data['language'].upper()}"
         if parser.has_section(lang_section):
@@ -414,6 +416,10 @@ class Config:
     @property
     def jhwh(self) -> str:
         return self._data["jhwh"]
+
+    @property
+    def person_name_format(self) -> str:
+        return self._data["personnameformat"]
 
     @property
     def translations(self) -> Path:

@@ -115,6 +115,7 @@ class HtmlConverter:
         longversionname_css = cfg.longversionname
         transliteration_css = cfg.transliteration
         verseemphasis_css   = cfg.verse_emphasis
+        personname_css      = cfg.person_name_format
 
         template = _TEMPLATE.read_text(encoding="utf-8")
         return (template
@@ -139,6 +140,7 @@ class HtmlConverter:
                 .replace("{longversionname_css}", longversionname_css)
                 .replace("{transliteration_css}", transliteration_css)
                 .replace("{verseemphasis_css}",   verseemphasis_css)
+                .replace("{personname_css}",      personname_css)
                 .replace("{greekfontsize}",       cfg.greek_font_size)
                 .replace("{hebrewfontsize}",      cfg.hebrew_font_size)
                 .replace("{body}",                raw))

@@ -114,6 +114,50 @@ def _replace_textcolor(text: str) -> str:
     return ''.join(out)
 
 
+def _format_personname(content: str) -> str:
+    """Wrap lowercase runs in <span class="personname">; uppercase/non-alpha chars pass through."""
+    result = []
+    i = 0
+    while i < len(content):
+        if content[i].islower():
+            j = i + 1
+            while j < len(content) and content[j].islower():
+                j += 1
+            result.append(f'<span class="personname">{content[i:j]}</span>')
+            i = j
+        else:
+            result.append(content[i])
+            i += 1
+    return ''.join(result)
+
+
+def _personname_to_html(text: str) -> str:
+    return _replace_cmd_fn(text, r'\personenname', _format_personname)
+
+
+def _replace_cmd_fn(text: str, cmd: str, fn) -> str:
+    """Replace \\cmd{content} with fn(content), handling nested braces."""
+    trigger = cmd + '{'
+    if trigger not in text:
+        return text
+    out = []
+    i = 0
+    while i < len(text):
+        if text[i:i + len(trigger)] == trigger:
+            j = i + len(trigger)
+            d = 1
+            while j < len(text) and d > 0:
+                if text[j] == '{':   d += 1
+                elif text[j] == '}': d -= 1
+                j += 1
+            out.append(fn(text[i + len(trigger):j - 1]))
+            i = j
+        else:
+            out.append(text[i])
+            i += 1
+    return ''.join(out)
+
+
 def apply_formatting(text: str) -> str:
 
     text = _ITEMIZE.sub(lambda m: _itemize_to_html(m.group(1), 'ul'), text)
@@ -123,12 +167,14 @@ def apply_formatting(text: str) -> str:
     text = _DESCRIPTION.sub(lambda m: _description_to_html(m.group(1)), text)
     text = _BIBLEVERSEFORMAT.sub(lambda m: f'<p class="quotation">{m.group(1)}</p>', text)
 
+    text = _replace_cmd(text, r'\centerline', '<p class="centerline">', '</p>')
     text = _replace_cmd(text, r'\textbf', '<strong>', '</strong>')
     text = _replace_cmd(text, r'\textit', '<i>', '</i>')
     text = _replace_textcolor(text)
 
     for cmd, cls in _SPAN_COMMANDS:
         text = _replace_cmd(text, f'\\{cmd}', f'<span class="{cls}">', '</span>')
+    text = _personname_to_html(text)
     return text
 
 

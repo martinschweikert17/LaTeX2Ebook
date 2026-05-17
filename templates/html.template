@@ -135,6 +135,10 @@
       text-indent: 0;
     }
 
+    p.centerline {
+      text-align: center;
+    }
+
     ul, ol {
       margin: 0.5em 0 0.8em 2em;
       padding: 0;
@@ -168,6 +172,7 @@
     span.longversionname { {longversionname_css} }
     span.transliteration { {transliteration_css} }
     span.verseemphasis { {verseemphasis_css} }
+    span.personname { {personname_css} }
 
     span.versenumber {
       vertical-align: super;

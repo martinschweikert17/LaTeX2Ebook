@@ -52,14 +52,14 @@ _CMD       = re.compile(
 
 
 def _load_names() -> dict[tuple[str, str], tuple[str, str]]:
-    """Return {(abbrev_lower, set_lower): (short_name, long_name)} from bibleref.csv."""
+    """Return {(abbrev, set_lower): (short_name, long_name)} from bibleref.csv."""
     names: dict[tuple[str, str], tuple[str, str]] = {}
     with open(_CSV_PATH, encoding="utf-8", newline="") as f:
         for row in csv.reader(f):
             if len(row) < 4:
                 continue
             abbrev, set_name, short, long_ = (c.strip() for c in row[:4])
-            names[(abbrev.lower(), set_name.lower())] = (short, long_)
+            names[(abbrev, set_name.lower())] = (short, long_)
     return names
 
 
@@ -91,7 +91,7 @@ def convert_bibleref(text: str) -> str:
         abbrev   = m.group(4).strip()
         ref      = m.group(5)           # content inside (...), or None
 
-        key = (abbrev.lower(), style.strip().lower())
+        key = (abbrev, style.strip().lower())
         if key not in names:
             _logger.warning(
                 "Unknown bibleref abbreviation '%s' (style '%s') in: %s",
