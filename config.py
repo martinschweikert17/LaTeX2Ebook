@@ -33,6 +33,12 @@ CONFIGURATION PRIORITY (low → high)
   2. INI file                      (--config <file>)
   3. Command-line parameters       (all flags except --config)
 
+  Exception – biblerefstyle / biblerefformat:
+  1. Hard-coded default values
+  2. LaTeX source  (\\biblerefstyle{} / \\biblerefformat{})
+  3. INI file
+  4. Command-line parameters       (highest – overrides source)
+
 USAGE IN OTHER CLASSES
 ----------------------
     from config import Config
@@ -54,6 +60,14 @@ from datetime import date
 from pathlib import Path
 
 PROGRAM_NAME = "latex2ebook"
+
+_BIBLEREF_STYLES: frozenset[str] = frozenset(
+    {"lthk", "lutherbibel", "einheitsuebersetzung", "jerusalem"}
+)
+
+_NUMBERING_STYLES: frozenset[str] = frozenset(
+    {"arabic", "roman_upper", "roman_lower", "alpha_upper", "alpha_lower", "none"}
+)
 
 _SZ_MAP: dict[str, tuple[str, str]] = {
     #                sz    szquoted
@@ -171,9 +185,15 @@ class Config:
             "transliteration":   "font-style: italic;",
             "verseemphasis":     "font-weight: bold;",
             "personnameformat":  "text-transform: uppercase; font-size: 85%;",
-            "biblerefstyle":   "LThK",
-            "translations":    "",
-            "jhwh":            "Jahwe",
+            "biblerefstyle":              "LThK",
+            "biblerefformat":             "kurz",
+            "translations":               "",
+            "jhwh":                       "Jahwe",
+            "numbering_part":             "roman_upper",
+            "numbering_chapter":          "arabic",
+            "numbering_section":          "arabic",
+            "numbering_subsection":       "arabic",
+            "numbering_subsubsection":    "arabic",
         }
 
     # ------------------------------------------------------------------
@@ -207,12 +227,21 @@ class Config:
             ("PATHS", "Translations"):     ("translations",     str),
             ("EBOOK", "YHWH"):             ("jhwh",             str),
             ("EBOOK", "PersonNameFormat"): ("personnameformat",  str),
+            ("EBOOK", "BibleRefStyle"):             ("biblerefstyle",           str),
+            ("EBOOK", "BibleRefFormat"):            ("biblerefformat",          str),
+            ("EBOOK", "NumberingPart"):             ("numbering_part",          str),
+            ("EBOOK", "NumberingChapter"):          ("numbering_chapter",       str),
+            ("EBOOK", "NumberingSection"):          ("numbering_section",       str),
+            ("EBOOK", "NumberingSubsection"):       ("numbering_subsection",    str),
+            ("EBOOK", "NumberingSubsubsection"):    ("numbering_subsubsection", str),
         }
 
+        self._ini_keys: set[str] = set()
         for (section, key), (internal_key, cast) in mapping.items():
             if parser.has_option(section, key):
                 raw = parser.get(section, key)
                 self._data[internal_key] = self._cast(raw, cast)
+                self._ini_keys.add(internal_key)
 
     # ------------------------------------------------------------------
     # Layer 3 – Command-line parameters
@@ -228,11 +257,15 @@ class Config:
             "target":           ("target",           str),
             "log_level":        ("log_level",        str),
             "debug":            ("debug",            bool),
+            "biblerefstyle":    ("biblerefstyle",    str),
+            "biblerefformat":   ("biblerefformat",   str),
         }
+        self._cli_keys: set[str] = set()
         for attr, (internal_key, cast) in cli_mapping.items():
             value = getattr(args, attr, None)
             if value is not None:
                 self._data[internal_key] = self._cast(value, cast)
+                self._cli_keys.add(internal_key)
 
     # ------------------------------------------------------------------
     # Layer 4 – Language-specific INI section (after CLI so language is final)
@@ -279,6 +312,35 @@ class Config:
                 f"[EBOOK] SZMode = {szmode!r} ist ungültig. "
                 f"Erlaubte Werte: {list(_SZ_MAP)}"
             )
+        biblerefstyle = self._data["biblerefstyle"]
+        if biblerefstyle.lower() not in _BIBLEREF_STYLES:
+            raise ValueError(
+                f"[EBOOK] BibleRefStyle = {biblerefstyle!r} ist ungültig. "
+                f"Erlaubte Werte: LThK, Lutherbibel, Einheitsuebersetzung, jerusalem"
+            )
+        biblerefformat = {"short": "kurz", "long": "lang"}.get(
+            self._data["biblerefformat"].lower(), self._data["biblerefformat"].lower()
+        )
+        self._data["biblerefformat"] = biblerefformat
+        if biblerefformat not in ("kurz", "lang"):
+            raise ValueError(
+                f"[EBOOK] BibleRefFormat = {biblerefformat!r} ist ungültig. "
+                f"Erlaubte Werte: kurz / short, lang / long"
+            )
+        _numbering_keys = {
+            "numbering_part":          "NumberingPart",
+            "numbering_chapter":       "NumberingChapter",
+            "numbering_section":       "NumberingSection",
+            "numbering_subsection":    "NumberingSubsection",
+            "numbering_subsubsection": "NumberingSubsubsection",
+        }
+        for key, ini_name in _numbering_keys.items():
+            val = self._data[key]
+            if val not in _NUMBERING_STYLES:
+                raise ValueError(
+                    f"[EBOOK] {ini_name} = {val!r} ist ungültig. "
+                    f"Erlaubte Werte: {sorted(_NUMBERING_STYLES)}"
+                )
 
     # Helper – type conversion
     # ------------------------------------------------------------------
@@ -414,12 +476,35 @@ class Config:
         return self._data["biblerefstyle"]
 
     @property
+    def biblerefformat(self) -> str:
+        return self._data["biblerefformat"]
+
+    def cli_has(self, key: str) -> bool:
+        """True if the given internal key was explicitly set via CLI."""
+        return key in getattr(self, "_cli_keys", set())
+
+    def ini_has(self, key: str) -> bool:
+        """True if the given internal key was explicitly set via INI."""
+        return key in getattr(self, "_ini_keys", set())
+
+    @property
     def jhwh(self) -> str:
         return self._data["jhwh"]
 
     @property
     def person_name_format(self) -> str:
         return self._data["personnameformat"]
+
+    @property
+    def heading_numbering(self) -> dict[str, str]:
+        """Numbering style per heading level (part, chapter, section, subsection, subsubsection)."""
+        return {
+            "part":          self._data["numbering_part"],
+            "chapter":       self._data["numbering_chapter"],
+            "section":       self._data["numbering_section"],
+            "subsection":    self._data["numbering_subsection"],
+            "subsubsection": self._data["numbering_subsubsection"],
+        }
 
     @property
     def translations(self) -> Path:
@@ -451,5 +536,7 @@ class Config:
             f"log_file={self.log_file!r}, "
             f"debug={self.debug}, "
             f"szmode={self.szmode!r}, "
+            f"biblerefstyle={self.biblerefstyle!r}, "
+            f"biblerefformat={self.biblerefformat!r}, "
             f"jhwh={self.jhwh!r})"
         )

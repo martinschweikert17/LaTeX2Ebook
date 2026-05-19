@@ -20,6 +20,11 @@ _BIBLEVERSEFORMAT = re.compile(
     re.DOTALL,
 )
 
+_XLTABULAR = re.compile(
+    r'\\begin\{xltabular\}\{[^}]*\}\{[^}]*\}(.*?)\\end\{xltabular\}',
+    re.DOTALL,
+)
+
 _ITEMIZE     = re.compile(r'\\begin\{itemize\}(.*?)\\end\{itemize\}',       re.DOTALL)
 _ENUMERATE   = re.compile(r'\\begin\{enumerate\}(?:\[([^\]]*)\])?(.*?)\\end\{enumerate\}', re.DOTALL)
 _DESCRIPTION = re.compile(r'\\begin\{description\}(.*?)\\end\{description\}', re.DOTALL)
@@ -158,6 +163,73 @@ def _replace_cmd_fn(text: str, cmd: str, fn) -> str:
     return ''.join(out)
 
 
+def _xltabular_to_html(body: str) -> str:
+    rows_html = []
+    for row in re.split(r'\\\\\s*', body):
+        row = row.strip()
+        if '&' not in row:
+            continue
+        td1, td2 = (c.strip() for c in row.split('&', 1))
+        rows_html.append(f'<tr><td>{td1}</td><td>{td2}</td></tr>')
+    return '<table>\n' + '\n'.join(rows_html) + '\n</table>' if rows_html else ''
+
+
+def convert_quotehebrew(text: str, hebrew_class: str = 'hebrew') -> str:
+    """Replace \\quotehebrew{arg1}{arg2}{arg3} with HTML spans.
+
+    If arg2 is non-empty: <span class=hebrew_class>arg2</span> <span class="transliteration">arg3</span>
+    If arg2 is empty:     arg1 <span class="transliteration">arg3</span>
+    """
+    trigger = r'\quotehebrew{'
+    if trigger not in text:
+        return text
+
+    out = []
+    i   = 0
+    n   = len(text)
+
+    def _brace_arg(start: int) -> tuple[str, int]:
+        depth = 1
+        j = start
+        while j < n and depth > 0:
+            if   text[j] == '{': depth += 1
+            elif text[j] == '}': depth -= 1
+            j += 1
+        return text[start:j - 1], j
+
+    def _skip_to_arg(start: int) -> int:
+        j = start
+        while j < n and text[j] != '{':
+            j += 1
+        return j + 1   # points to first char inside '{'
+
+    while i < n:
+        pos = text.find(trigger, i)
+        if pos < 0:
+            out.append(text[i:])
+            break
+        out.append(text[i:pos])
+
+        j        = pos + len(trigger)   # first char of arg1 body
+        arg1, j  = _brace_arg(j)
+        j        = _skip_to_arg(j)
+        arg2, j  = _brace_arg(j)
+        j        = _skip_to_arg(j)
+        arg3, j  = _brace_arg(j)
+
+        if arg2.strip():
+            out.append(
+                f'<span class="{hebrew_class}">{arg2}</span>'
+                f' <span class="transliteration">{arg3}</span>'
+            )
+        else:
+            out.append(f'{arg1} <span class="transliteration">{arg3}</span>')
+
+        i = j
+
+    return ''.join(out)
+
+
 def apply_formatting(text: str) -> str:
 
     text = _ITEMIZE.sub(lambda m: _itemize_to_html(m.group(1), 'ul'), text)
@@ -168,6 +240,7 @@ def apply_formatting(text: str) -> str:
     text = _BIBLEVERSEFORMAT.sub(lambda m: f'<p class="quotation">{m.group(1)}</p>', text)
 
     text = _replace_cmd(text, r'\centerline', '<p class="centerline">', '</p>')
+    text = _replace_cmd(text, r'\minisec',   '<p class="minisec">',    '</p>')
     text = _replace_cmd(text, r'\textbf', '<strong>', '</strong>')
     text = _replace_cmd(text, r'\textit', '<i>', '</i>')
     text = _replace_textcolor(text)
@@ -175,31 +248,59 @@ def apply_formatting(text: str) -> str:
     for cmd, cls in _SPAN_COMMANDS:
         text = _replace_cmd(text, f'\\{cmd}', f'<span class="{cls}">', '</span>')
     text = _personname_to_html(text)
+    text = _XLTABULAR.sub(lambda m: _xltabular_to_html(m.group(1)), text)
     return text
 
 
 def _eliminate_cmd(text: str, cmd: str) -> str:
-    """Remove \\cmd{...} including its content entirely, handling nested braces."""
+    """Remove \\cmd{...} including its content entirely, handling nested braces.
+
+    If the command is the only non-whitespace content on its line the entire
+    line (including its trailing newline) is removed, so no spurious blank
+    line is left behind in the output.
+    """
     trigger = cmd + '{'
     if trigger not in text:
         return text
 
-    out = []
-    i = 0
-    while i < len(text):
-        if text[i:i + len(trigger)] == trigger:
-            j = i + len(trigger)
-            d = 1
-            while j < len(text) and d > 0:
-                if text[j] == '{':
-                    d += 1
-                elif text[j] == '}':
-                    d -= 1
-                j += 1
-            i = j
+    out  = []
+    prev = 0
+    i    = 0
+    n    = len(text)
+
+    while True:
+        pos = text.find(trigger, i)
+        if pos < 0:
+            out.append(text[prev:])
+            break
+
+        # Brace-counted end of command body
+        j = pos + len(trigger)
+        d = 1
+        while j < n and d > 0:
+            if   text[j] == '{': d += 1
+            elif text[j] == '}': d -= 1
+            j += 1
+
+        # Line boundaries around the command
+        ls = text.rfind('\n', 0, pos)
+        ls = ls + 1 if ls >= 0 else 0
+        le = text.find('\n', j)
+
+        before_on_line = text[ls:pos]
+        after_on_line  = text[j:le] if le >= 0 else text[j:]
+
+        if before_on_line.strip() == '' and after_on_line.strip() == '':
+            # Command is alone on its line → remove the whole line
+            out.append(text[prev:ls])
+            prev = (le + 1) if le >= 0 else n
         else:
-            out.append(text[i])
-            i += 1
+            # Command is inline → remove only the command
+            out.append(text[prev:pos])
+            prev = j
+
+        i = j
+
     return ''.join(out)
 
 

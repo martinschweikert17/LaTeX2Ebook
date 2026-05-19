@@ -14,13 +14,12 @@ Supported commands
   \\ibiblechvs{book}[(ch:vs)]     – same
   \\biblevs{book}[(ch:vs)]        – verse(s) only
   \\ibiblevs{book}[(ch:vs)]       – same
-  *_long variants                 – use the long book name (column 4 of CSV)
   \\iibibleverse{book}[(ch:vs)]   – index only; eliminated without output
 
 Book name sets
 --------------
-  Determined by \\biblerefstyle{N} found in the source (error if > 1).
-  Falls back to Config.biblerefstyle ("LThK") if absent.
+  Reihenfolge: CLI > INI > \\biblerefstyle{} im Quelltext > Default (LThK).
+  Ebenso für \\biblerefformat{}: CLI > INI > Quelltext > Default (kurz).
   Available sets: LThK, Lutherbibel, Einheitsuebersetzung, jerusalem.
 
 Chapter/verse separator
@@ -44,10 +43,10 @@ _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.bibleref")
 _CSV_PATH = Path(__file__).parent.parent / "data" / "bibleref.csv"
 
 _STYLE_CMD   = re.compile(r'\\biblerefstyle\{([^}]+)\}')
-_FORMAT_CMD  = re.compile(r'\\biblerefformat\{[^}]*\}')
+_FORMAT_CMD  = re.compile(r'\\biblerefformat\{([^}]*)\}')
 _IIBIBLE     = re.compile(r'\\iibibleverse\{[^}]+\}(?:\([^)]*\))?')
 _CMD       = re.compile(
-    r'\\(i?)(bibleverse|biblechvs|biblevs)(_long)?\{([^}]+)\}(?:\(([^)]*)\))?'
+    r'\\(i?)(bibleverse|biblechvs|biblevs)\{([^}]+)\}(?:\(([^)]*)\))?'
 )
 
 
@@ -68,16 +67,29 @@ def convert_bibleref(text: str) -> str:
     cfg   = Config.get()
     names = _load_names()
 
-    # Determine and remove \biblerefstyle{N}
+    # Determine and remove \biblerefstyle{N}  (CLI > INI > source > default)
     styles = _STYLE_CMD.findall(text)
     if len(styles) > 1:
         raise ValueError(
             f"\\biblerefstyle appears {len(styles)} times – expected at most once"
         )
-    style = styles[0] if styles else cfg.biblerefstyle
+    if cfg.cli_has("biblerefstyle") or cfg.ini_has("biblerefstyle"):
+        style = cfg.biblerefstyle          # CLI or INI wins
+    else:
+        style = styles[0] if styles else cfg.biblerefstyle   # source, then default
     text  = _STYLE_CMD.sub("", text)
 
-    # Eliminate \biblerefformat (ignored)
+    # Determine and remove \biblerefformat{FORMAT}  (CLI > INI > source > default)
+    formats = _FORMAT_CMD.findall(text)
+    if len(formats) > 1:
+        raise ValueError(
+            f"\\biblerefformat appears {len(formats)} times – expected at most once"
+        )
+    if cfg.cli_has("biblerefformat") or cfg.ini_has("biblerefformat"):
+        fmt = cfg.biblerefformat.lower()   # CLI or INI wins
+    else:
+        fmt = formats[0].strip().lower() if formats else cfg.biblerefformat.lower()  # source, then default
+    use_long_default = fmt in ("lang", "long")
     text = _FORMAT_CMD.sub("", text)
 
     # Eliminate \iibibleverse (index-only, no visible output)
@@ -87,9 +99,8 @@ def convert_bibleref(text: str) -> str:
 
     def replace(m: re.Match) -> str:
         cmd      = m.group(2)           # bibleverse | biblechvs | biblevs
-        use_long = m.group(3) is not None
-        abbrev   = m.group(4).strip()
-        ref      = m.group(5)           # content inside (...), or None
+        abbrev   = m.group(3).strip()
+        ref      = m.group(4)           # content inside (...), or None
 
         key = (abbrev, style.strip().lower())
         if key not in names:
@@ -101,7 +112,7 @@ def convert_bibleref(text: str) -> str:
         else:
             short, long_ = names[key]
 
-        book_name = long_ if use_long else short
+        book_name = long_ if use_long_default else short
 
         # Parse chapter and verse from ref
         if ref is None:

@@ -32,6 +32,34 @@ from latex.formatting import _eliminate_cmd, _replace_cmd
 _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.expressions")
 _BIBLE_NAMES: dict[str, str] | None = None
 
+_NEWCMD_START = re.compile(
+    r'\\(?:(?:new|renew)command\*?\s*\{(?:\\[A-Za-z]+)?\}|newcolumntype\s*\{[^}]*\})'
+    r'\s*(?:\[[^\]]*\])?\s*\{'
+)
+
+
+def _eliminate_newcommand_defs(text: str) -> str:
+    """Remove all \\newcommand definitions using brace-counting for the body."""
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        m = _NEWCMD_START.search(text, i)
+        if m is None:
+            out.append(text[i:])
+            break
+        out.append(text[i:m.start()])
+        depth = 1
+        j = m.end()
+        while j < n and depth > 0:
+            if text[j] == '{':
+                depth += 1
+            elif text[j] == '}':
+                depth -= 1
+            j += 1
+        i = j
+    return ''.join(out)
+
 
 def _bible_names() -> dict[str, str]:
     global _BIBLE_NAMES
@@ -54,6 +82,14 @@ def convert_expressions(raw: str) -> str:
     """
     cfg = Config.get()
 
+    # Eliminate \newcommand / \renewcommand definitions before any substitutions run
+    # (substitutions would corrupt the command names inside the definitions)
+    result = _eliminate_newcommand_defs(raw)
+
+    # Strip ~ used as spacing glue between layout commands (before individual substitutions)
+    result = re.sub(r'(\\(?:bigskip|medskip|newpage|vfill))\s*~\s*', r'\1', result)
+    result = re.sub(r'~\s*(\\(?:bigskip|medskip|newpage|vfill))', r'\1', result)
+
     # Replacements - keep the order of these in mind, as some may interact (e.g. szquoted should be replaced before sz)
     replacements = {
         r'{\szquoted}': cfg.szquoted,
@@ -66,9 +102,11 @@ def convert_expressions(raw: str) -> str:
         r'\bigskip':    '<br/>',
         r'\medskip':    '<br/>',
         r'\-':          '',
+        r'\S':          '§',
         r'{\euml}':     'ë',
+        r'{\prozent}':  '%',
+        '~':            '&nbsp;',
     }
-    result = raw
     for old, new in replacements.items():
         result = result.replace(old, new)
 
@@ -83,10 +121,6 @@ def convert_expressions(raw: str) -> str:
     # cjhebrew: {\larger[n]\cjRL{...}} and \cjRL{...}
     result = convert_cjhebrew(result)
 
-    # %%%L2E variables
-    result = re.sub(r'%%%L2E_HEBREW[{]([^}]*)[}]', r'<span class="hebrew">\1</span>', result)
-    result = re.sub(r'%%%L2E_GREEK[{]([^}]*)[}]',  r'<span class="greek">\1</span>',  result)
-
     # Bible translation names
     result = _replace_cmd(result, r'\biblename', '', '')
     result = re.sub(
@@ -99,12 +133,37 @@ def convert_expressions(raw: str) -> str:
     _DELETE = (
         r'\begin{document}',
         r'\end{document}',
+        r'\backmatter',
+        r'\end{addmargin}',
+        r'\listoffigures',
+        r'\listofsymbols',
+        r'\listoftables',
+        r'\printindex',
+        r'\setdefaultparagraphmode',
+        r'\setparagraphsseparated',
+        r'\frontmatter',
+        r'\mainmatter',
+        r'\makecopyright',
+        r'\makehalftitle',
+        r'\maketitle',
+        r'\newpage',
+        r'\tableofcontents',
+        r'~\vfill',
+        r'\vfill',
+        r'\begin{center}',
+        r'\end{center}',
     )
     for expr in _DELETE:
         result = result.replace(expr, '')
 
     result = re.sub(r'\\usepackage(?:\[[^\]]*\])?\{[^}]*\}', '', result)
     result = re.sub(r'\\input\{[^}]*\}', '', result)
+    result = re.sub(r'\\addcontentsline\{[^}]*\}\{[^}]*\}\{[^}]*\}', '', result)
+    result = re.sub(r'\\makeindex(?:\{[^}]*\})?', '', result)
+    result = re.sub(r'\\setcounter\{[^}]*\}\{[^}]*\}', '', result)
+    result = re.sub(r'\\vspace\*?\{[^}]*\}', '', result)
+    result = re.sub(r'\\pagestyle\{[^}]*\}', '', result)
+    result = re.sub(r'\\(?:widow|club|displaywidow)penalty\s*=\s*\d+', '', result)
 
 
     if cfg.debug:
@@ -116,12 +175,19 @@ def convert_expressions(raw: str) -> str:
 
 
 _BLANK_LINES = re.compile(r'\n[ \t]*\n+')
+_BLOCK_OPEN  = re.compile(r'^<(?:table|div|ul|ol|dl|blockquote|pre|figure|h[1-6]|p)\b', re.IGNORECASE)
 
 
 def build_paragraphs(text: str) -> str:
-    """Wrap blank-line-separated blocks in <p>...</p> tags."""
+    """Wrap blank-line-separated blocks in <p>...</p> tags (block-level HTML is left unwrapped)."""
     blocks = _BLANK_LINES.split(text)
-    return '\n'.join(f'<p>{b.strip()}</p>' for b in blocks if b.strip())
+    result = []
+    for b in blocks:
+        b = b.strip()
+        if not b:
+            continue
+        result.append(b if _BLOCK_OPEN.match(b) else f'<p>{b}</p>')
+    return '\n'.join(result)
 
 
 # Outer quotes: „ ... "   Inner quotes: ‚ ... '

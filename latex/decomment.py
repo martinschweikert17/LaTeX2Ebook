@@ -22,6 +22,8 @@ Strips LaTeX comments before further processing. Three classes are handled:
   Class 4 – %%%L2E_* structural markers
              Lines starting with '%%%L2E_' are never removed; they carry
              structural information consumed by later pipeline stages.
+             %%%L2E_* markers that appear inline (mid-line) are also
+             preserved; only the surrounding comment text is stripped.
 
 Pipeline position
 -----------------
@@ -43,7 +45,10 @@ _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.decomment")
 
 _L2E_MARKER    = re.compile(r'^\s*%%%L2E_')
 _FULL_LINE     = re.compile(r'^\s*%')
-_INLINE        = re.compile(r'(?<!\\)%.*')
+
+# Alternation: keep %%%L2E_* inline markers; strip everything else from %
+# The %%%L2E_ alternative must come first so it wins over the plain-% alternative.
+_INLINE_OR_L2E = re.compile(r'(%%%L2E_[A-Z_]+(?:\{[^}]*\})?)|(?<!\\)%.*')
 
 
 def decomment(text: str) -> str:
@@ -82,8 +87,9 @@ def _remove_comments(text: str) -> str:
             out.append(eol)
             continue
 
-        # Class 1: inline comment — strip from first unescaped %
-        content = _INLINE.sub('', content).rstrip()
+        # Class 1: inline comment — strip from first unescaped %,
+        # but preserve any %%%L2E_* markers that appear mid-line.
+        content = _INLINE_OR_L2E.sub(lambda m: m.group(1) or '', content).rstrip()
         out.append(content + eol)
 
     return ''.join(out)

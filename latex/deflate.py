@@ -100,10 +100,35 @@ def _deflate_lang(text: str, lang: str) -> str:
         close_m = _LANG_CLOSE.match(text, j)
         end = close_m.end() if close_m else j
 
-        if block_lang == lang:
-            out.append(_deflate_lang(content, lang))
+        # Check for optional else branch: \ifbool{LANG_XX}{first}{else}
+        else_start = end
+        while else_start < n and text[else_start] in ' \t\n':
+            else_start += 1
 
-        i = end
+        if else_start < n and text[else_start] == '{':
+            # Brace-count the else branch
+            j2 = else_start + 1
+            depth2 = 1
+            content_start2 = j2
+            while j2 < n and depth2 > 0:
+                if text[j2] == '{':
+                    depth2 += 1
+                elif text[j2] == '}':
+                    depth2 -= 1
+                j2 += 1
+            else_content = text[content_start2:j2 - 1]
+            close_m2 = _LANG_CLOSE.match(text, j2)
+            i = close_m2.end() if close_m2 else j2
+
+            if block_lang == lang:
+                out.append(_deflate_lang(content, lang))
+            else:
+                out.append(_deflate_lang(else_content, lang))
+        else:
+            # No else branch
+            if block_lang == lang:
+                out.append(_deflate_lang(content, lang))
+            i = end
 
     return ''.join(out)
 

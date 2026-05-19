@@ -9,9 +9,12 @@ deflates it by removing irrelevant blocks, strips %%BLOCK comment
 lines via decomment(), and returns the result as a plain string.
 It is the first step in the conversion pipeline.
 
-Pipeline position
------------------
-  [latex/reader.py]  →  html/converter.py  →  ebook/builder.py
+Pipeline
+--------
+  deflate  →  decomment  →  expand_newcommands  →  apply_personal_commands
+  →  convert_bibleref  →  convert_expressions  →  apply_formatting
+  →  convert_headings  →  process_footnotes  →  build_paragraphs
+  →  html/converter.py  →  ebook/builder.py
 
 Expected inputs
 ---------------
@@ -35,7 +38,10 @@ from latex.bibleref import convert_bibleref
 from latex.decomment import decomment
 from latex.deflate import deflate
 from latex.expressions import build_paragraphs, convert_expressions
+from latex.footnotes import process_footnotes
 from latex.formatting import apply_formatting
+from latex.headings import convert_headings
+from latex.newcommands import expand_newcommands
 from latex.personal_settings import apply_personal_commands, build_jhwh_commands
 
 
@@ -73,10 +79,13 @@ class LatexReader:
 
         raw = deflate(path.read_text(encoding="utf-8"))
         raw = decomment(raw)
+        raw = expand_newcommands(raw)
         raw = apply_personal_commands(raw, build_jhwh_commands())
         raw = convert_bibleref(raw)
         raw = convert_expressions(raw)
         raw = apply_formatting(raw)
+        raw = convert_headings(raw)
+        raw = process_footnotes(raw)
         raw = build_paragraphs(raw)
 
 

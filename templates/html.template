@@ -42,7 +42,7 @@
     /* Headings                                                             */
     /* ------------------------------------------------------------------ */
 
-    h1, h2, h3, h4 {
+    h1, h2, h3, h4, h5 {
       font-family: sans-serif;
       font-weight: bold;
       line-height: 1.2;
@@ -55,6 +55,7 @@
     h2 { font-size: 1.4em; }
     h3 { font-size: 1.2em; }
     h4 { font-size: 1.0em; }
+    h5 { font-size: 0.9em; }
 
     /* ------------------------------------------------------------------ */
     /* Title page                                                           */
@@ -139,6 +140,16 @@
       text-align: center;
     }
 
+    p.minisec {
+      font-family: sans-serif;
+      font-size: 1.0em;
+      font-weight: bold;
+      line-height: 1.2;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      page-break-after: avoid;
+    }
+
     ul, ol {
       margin: 0.5em 0 0.8em 2em;
       padding: 0;
@@ -184,6 +195,60 @@
     {dropcap_css}
 
     /* ------------------------------------------------------------------ */
+    /* Footnotes                                                            */
+    /* ------------------------------------------------------------------ */
+
+    a.footnote-ref {
+      font-size: 0.75em;
+      vertical-align: super;
+      line-height: 0;
+      text-decoration: none;
+    }
+
+    a.footnote-backref {
+      text-decoration: none;
+      font-size: 1.2em;
+      margin-left: 0.4em;
+    }
+
+    /* \footnote – standard footnote with paragraph spacing */
+    p.footnote {
+      font-size: 0.85em;
+      margin-top: 0.4em;
+      margin-bottom: 0.4em;
+      text-align: left;
+    }
+
+    /* \pfootnote – paragraphs run together; first word of each is indented */
+    p.pfootnote {
+      font-size: 0.85em;
+      margin-top: 0;
+      margin-bottom: 0;
+      text-indent: 1.5em;
+      text-align: left;
+    }
+
+    /* Inline footnotes (epub / non-htmlonly mode) */
+    p.footnote-inline {
+      font-size: 0.85em;
+      margin-left: 2em;
+      margin-right: 2em;
+      margin-top: 0.3em;
+      margin-bottom: 0.3em;
+      text-align: left;
+    }
+
+    p.pfootnote-inline {
+      font-size: 0.85em;
+      margin-left: 2em;
+      margin-right: 2em;
+      margin-top: 0;
+      margin-bottom: 0;
+      text-indent: 1.5em;
+      text-align: left;
+    }
+
+    /* ------------------------------------------------------------------ */
     /* Hebrew text                                                          */
     /* ------------------------------------------------------------------ */
 
@@ -192,6 +257,14 @@
       unicode-bidi: embed;       /* isolate the RTL run inside LTR context */
       font-family: "SBL Hebrew", "Ezra SIL", "David", serif;
       font-size: {hebrewfontsize};
+    }
+
+    /* Hebrew inside footnotes – slightly larger than footnote font size */
+    span.hebrew-footnote {
+      direction: rtl;
+      unicode-bidi: embed;
+      font-family: "SBL Hebrew", "Ezra SIL", "David", serif;
+      font-size: 1.1em;          /* relative to p.footnote's 0.85em */
     }
 
     /* ------------------------------------------------------------------ */

@@ -90,7 +90,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--target",
-        metavar="FORMAT",
         choices=["epub", "html"],
         help="Target format: epub, html",
     )
@@ -101,7 +100,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--log-level",
-        metavar="LEVEL",
         dest="log_level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Logging level",
@@ -111,6 +109,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=None,
         help="Enable debug mode",
+    )
+    parser.add_argument(
+        "--biblerefstyle",
+        metavar="STYLE",
+        dest="biblerefstyle",
+        help="Bible reference style: LThK, Lutherbibel, Einheitsuebersetzung, jerusalem (case-insensitive)",
+    )
+    parser.add_argument(
+        "--biblerefformat",
+        metavar="FORMAT",
+        dest="biblerefformat",
+        help="Bible reference format: kurz/short (short name) or lang/long (full name) (case-insensitive)",
     )
 
     return parser
