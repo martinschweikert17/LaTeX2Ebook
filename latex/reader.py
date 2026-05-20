@@ -13,7 +13,7 @@ Pipeline
 --------
   deflate  →  decomment  →  expand_newcommands  →  apply_personal_commands
   →  convert_bibleref  →  convert_expressions  →  apply_formatting
-  →  convert_headings  →  process_refs  →  process_footnotes  →  build_paragraphs
+  →  convert_headings  →  process_footnotes  →  process_refs  →  build_paragraphs
   →  html/converter.py  →  ebook/builder.py
 
 Expected inputs
@@ -86,8 +86,8 @@ class LatexReader:
         raw = convert_expressions(raw)
         raw = apply_formatting(raw)
         raw = convert_headings(raw)
-        raw = process_refs(raw)
         raw = process_footnotes(raw)
+        raw = process_refs(raw)
         raw = build_paragraphs(raw)
 
 

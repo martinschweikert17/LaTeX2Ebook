@@ -35,7 +35,9 @@ def process_refs(text: str) -> str:
 
     def _ref_link(name: str) -> str:
         if name in labels:
-            return f'<a href="#{name}">{labels[name]["num"]}</a>'
+            info = labels[name]
+            href = info.get('href', f'#{name}')
+            return f'<a href="{href}">{info["num"]}</a>'
         _logger.warning("Unknown label in \\ref: %s", name)
         return f'[?{name}]'
 

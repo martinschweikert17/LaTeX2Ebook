@@ -24,7 +24,10 @@ Inline mode (epub):
 
 Pipeline position
 -----------------
-  latex/headings.py  →  [latex/footnotes.py]  →  latex/expressions.build_paragraphs
+  latex/refs.py  →  [latex/footnotes.py]  →  latex/expressions.build_paragraphs
+
+  Note: footnotes.py runs BEFORE refs.py so that \\label{} commands inside
+  footnote bodies are registered in the label map before \\ref{} is resolved.
 """
 
 import re
@@ -32,6 +35,7 @@ import logging
 
 from config import Config, PROGRAM_NAME
 from latex.formatting import convert_quotehebrew
+from latex.headings import get_label_map
 
 _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.footnotes")
 
@@ -40,6 +44,8 @@ _FN_SECTION = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 _FN_PLACEHOLDER = '%%%L2E_FOOTNOTES'
+
+_LABEL_IN_FN = re.compile(r'\\label\{([^}]+)\}')
 
 # Longest trigger first so \pfootnote is never confused with \footnote
 _TRIGGERS = (
@@ -91,8 +97,16 @@ def _scan_footnotes(text: str, htmlonly: bool) -> tuple[str, list[tuple[str, str
         body = text[best_pos + len(best_trig) : j - 1]
         body = convert_quotehebrew(body, 'hebrew-footnote')
 
+        fn_labels = _LABEL_IN_FN.findall(body)
+        body = _LABEL_IN_FN.sub('', body)
+
         footnotes.append((best_kind, body))
         fn_num = len(footnotes)
+
+        label_map = get_label_map()
+        for lbl in fn_labels:
+            label_map[lbl] = {'num': str(fn_num), 'title': '', 'tag': 'fn',
+                              'href': f'#fn-{fn_num}'}
 
         if htmlonly:
             out.append(
@@ -112,7 +126,8 @@ def _scan_footnotes(text: str, htmlonly: bool) -> tuple[str, list[tuple[str, str
                     css = 'footnote-inline'
                 if i == last:
                     css += ' fn-inline-end'
-                elems.append(f'<p class="{css}">{p}</p>')
+                id_attr = f' id="fn-{fn_num}"' if i == 0 else ''
+                elems.append(f'<p class="{css}"{id_attr}>{p}</p>')
             out.append('\n\n' + '\n'.join(elems) + '\n\n')
 
         i = j
