@@ -181,6 +181,7 @@ class Config:
             "output_directory": "",      # empty = <input_directory>/L2E
             "target":          "epub",  # epub | html
             "szmode":          "normal",
+            "fullreftitle":      "font-style: italic;",
             "longversionname":   "font-style: italic;",
             "transliteration":   "font-style: italic;",
             "verseemphasis":     "font-weight: bold;",
@@ -210,6 +211,7 @@ class Config:
         mapping = {
             # (ini-section, ini-key) → (internal key, type)
             ("EBOOK", "SZMode"):         ("szmode",          str),
+            ("EBOOK", "FullRefTitle"):    ("fullreftitle",    str),
             ("EBOOK", "LongVersionName"): ("longversionname", str),
             ("EBOOK", "Transliteration"): ("transliteration", str),
             ("EBOOK", "VerseEmphasis"): ("verseemphasis", str),
@@ -450,6 +452,10 @@ class Config:
     @property
     def programname(self) -> str:
         return self._data["programname"]
+
+    @property
+    def fullref_title(self) -> str:
+        return self._data["fullreftitle"]
 
     @property
     def longversionname(self) -> str:

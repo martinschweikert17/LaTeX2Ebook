@@ -13,7 +13,7 @@ Pipeline
 --------
   deflate  →  decomment  →  expand_newcommands  →  apply_personal_commands
   →  convert_bibleref  →  convert_expressions  →  apply_formatting
-  →  convert_headings  →  process_footnotes  →  build_paragraphs
+  →  convert_headings  →  process_refs  →  process_footnotes  →  build_paragraphs
   →  html/converter.py  →  ebook/builder.py
 
 Expected inputs
@@ -42,6 +42,7 @@ from latex.footnotes import process_footnotes
 from latex.formatting import apply_formatting
 from latex.headings import convert_headings
 from latex.newcommands import expand_newcommands
+from latex.refs import process_refs
 from latex.personal_settings import apply_personal_commands, build_jhwh_commands
 
 
@@ -85,6 +86,7 @@ class LatexReader:
         raw = convert_expressions(raw)
         raw = apply_formatting(raw)
         raw = convert_headings(raw)
+        raw = process_refs(raw)
         raw = process_footnotes(raw)
         raw = build_paragraphs(raw)
 

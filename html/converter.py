@@ -112,6 +112,7 @@ class HtmlConverter:
             f'<p class="ebook-copyright">{copyright_text}</p>'
             if cfg.htmlonly else ""
         )
+        fullreftitle_css    = cfg.fullref_title
         longversionname_css = cfg.longversionname
         transliteration_css = cfg.transliteration
         verseemphasis_css   = cfg.verse_emphasis
@@ -137,6 +138,7 @@ class HtmlConverter:
                 .replace("{ebook_subtitle}",      ebook_subtitle)
                 .replace("{ebook_author}",        ebook_author)
                 .replace("{copyright_block}",     copyright_block)
+                .replace("{fullreftitle_css}",    fullreftitle_css)
                 .replace("{longversionname_css}", longversionname_css)
                 .replace("{transliteration_css}", transliteration_css)
                 .replace("{verseemphasis_css}",   verseemphasis_css)

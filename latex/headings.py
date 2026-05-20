@@ -20,9 +20,15 @@ Numbering
     alpha_lower – a, b, c …
     none        – no number
 
+Labels
+------
+  \\label{name} immediately following a heading is consumed here.
+  The heading receives id="name" and the label is recorded in _label_map
+  so latex/refs.py can resolve \\ref / \\fullref etc.
+
 Pipeline position
 -----------------
-  latex/formatting.py  →  [latex/headings.py]  →  latex/expressions.build_paragraphs
+  latex/formatting.py  →  [latex/headings.py]  →  latex/refs.py
 """
 
 import re
@@ -102,11 +108,30 @@ _HEADING_CMD = re.compile(
     r'\s*(?:\[[^\]]*\])?\s*\{'
 )
 
+# \label{name} optionally following a heading (any whitespace between)
+_LABEL_AFTER = re.compile(r'\s*\\label\{([^}]+)\}')
+
+# label name → {'num': str, 'title': str, 'tag': str}
+# Reset at the start of each convert_headings() call.
+_label_map: dict[str, dict[str, str]] = {}
+
+
+def get_label_map() -> dict[str, dict[str, str]]:
+    """Return the label map built by the most recent convert_headings() call."""
+    return _label_map
+
 
 def convert_headings(text: str) -> str:
-    """Replace LaTeX heading commands with numbered HTML headings."""
-    cfg     = Config.get()
-    styles  = cfg.heading_numbering
+    """Replace LaTeX heading commands with numbered HTML headings.
+
+    \\label{name} immediately following a heading is consumed: the heading
+    receives id="name" and the label is recorded for cross-reference resolution.
+    """
+    global _label_map
+    _label_map = {}
+
+    cfg      = Config.get()
+    styles   = cfg.heading_numbering
     counters = {level: 0 for level in _HEADING_LEVELS}
 
     out = []
@@ -120,22 +145,30 @@ def convert_headings(text: str) -> str:
             break
 
         out.append(text[i:m.start()])
-        level  = m.group(1)
+        level   = m.group(1)
         starred = m.group(2) is not None
 
         # Brace-count to extract the title (handles nested {…} inside)
         j     = m.end()
         depth = 1
         while j < n and depth > 0:
-            if text[j] == '{':    depth += 1
-            elif text[j] == '}':  depth -= 1
+            if   text[j] == '{': depth += 1
+            elif text[j] == '}': depth -= 1
             j += 1
         title = text[m.end():j - 1]
 
         tag = _HTML_TAG[level]
 
+        # Consume optional \label{name} immediately after the closing }
+        lm         = _LABEL_AFTER.match(text, j)
+        label_name = lm.group(1) if lm else None
+        if lm:
+            j = lm.end()
+
+        id_attr = f' id="{label_name}"' if label_name else ''
+
         if starred:
-            out.append(f'<{tag}>{title}</{tag}>')
+            out.append(f'<{tag}{id_attr}>{title}</{tag}>')
         else:
             level_idx = _HEADING_LEVELS.index(level)
             counters[level] += 1
@@ -145,9 +178,12 @@ def convert_headings(text: str) -> str:
             num = _build_number(level, counters, styles)
 
             if num:
-                out.append(f'<{tag}>{num} {title}</{tag}>')
+                out.append(f'<{tag}{id_attr}>{num} {title}</{tag}>')
             else:
-                out.append(f'<{tag}>{title}</{tag}>')
+                out.append(f'<{tag}{id_attr}>{title}</{tag}>')
+
+            if label_name:
+                _label_map[label_name] = {'num': num, 'title': title, 'tag': tag}
 
         i = j
 

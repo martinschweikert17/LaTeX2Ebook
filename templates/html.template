@@ -184,6 +184,8 @@
     span.transliteration { {transliteration_css} }
     span.verseemphasis { {verseemphasis_css} }
     span.personname { {personname_css} }
+    a.fullref { display: inline-block; vertical-align: baseline; white-space: nowrap; }
+    a.fullref span.fullref-title { {fullreftitle_css} }
 
     span.versenumber {
       vertical-align: super;
