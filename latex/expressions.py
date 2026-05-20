@@ -86,6 +86,10 @@ def convert_expressions(raw: str) -> str:
     # (substitutions would corrupt the command names inside the definitions)
     result = _eliminate_newcommand_defs(raw)
 
+    # cjhebrew must run before the replacements dict so that '--' inside \cjRL{}
+    # is decoded as maqqef (U+05BE) and not first mangled into '&ndash;'.
+    result = convert_cjhebrew(result)
+
     # Strip ~ used as spacing glue between layout commands (before individual substitutions)
     result = re.sub(r'(\\(?:bigskip|medskip|newpage|vfill))\s*~\s*', r'\1', result)
     result = re.sub(r'~\s*(\\(?:bigskip|medskip|newpage|vfill))', r'\1', result)
@@ -118,9 +122,6 @@ def convert_expressions(raw: str) -> str:
         result = _eliminate_cmd(result, cmd)
     result = _replace_cmd(result, r'\onlyforltoe', '', '')
 
-    # cjhebrew: {\larger[n]\cjRL{...}} and \cjRL{...}
-    result = convert_cjhebrew(result)
-
     # Bible translation names
     result = _replace_cmd(result, r'\biblename', '', '')
     result = re.sub(
@@ -152,6 +153,7 @@ def convert_expressions(raw: str) -> str:
         r'\vfill',
         r'\begin{center}',
         r'\end{center}',
+        r'\phantomsection',
     )
     for expr in _DELETE:
         result = result.replace(expr, '')
@@ -164,6 +166,12 @@ def convert_expressions(raw: str) -> str:
     result = re.sub(r'\\vspace\*?\{[^}]*\}', '', result)
     result = re.sub(r'\\pagestyle\{[^}]*\}', '', result)
     result = re.sub(r'\\(?:widow|club|displaywidow)penalty\s*=\s*\d+', '', result)
+
+    # \num{N} – HTML has no equivalent; output the number as-is
+    result = _replace_cmd(result, r'\num', '', '')
+
+    # \url{U} – clickable link
+    result = re.sub(r'\\url\{([^}]*)\}', r'<a href="\1">\1</a>', result)
 
 
     if cfg.debug:
@@ -195,24 +203,44 @@ _QUOTES = [('&bdquo;', '&ldquo;'), ('&sbquo;', '&lsquo;')]
 
 _ENQUOTE = r'\enquote{'
 
+# Footnote commands whose bodies must be processed at depth=0 (independent context).
+# Longest trigger first so \pfootnote is never confused with \footnote.
+_FN_TRIGGERS = (r'\pfootnote{', r'\footnote{')
+
 
 def _replace_enquote(text: str, depth: int = 0) -> str:
-    """Replace \\enquote{...} with HTML quotation marks, alternating by nesting depth."""
+    """Replace \\enquote{...} with HTML quotation marks, alternating by nesting depth.
+
+    \\footnote and \\pfootnote bodies are always processed at depth=0 so that
+    \\enquote inside a footnote starts fresh with outer quotation marks,
+    regardless of the nesting level of the surrounding text.
+    """
     if _ENQUOTE not in text:
         return text
 
     open_q, close_q = _QUOTES[depth % 2]
     out = []
     i = 0
-    while i < len(text):
-        if text[i:i + len(_ENQUOTE)] == _ENQUOTE:
+    n = len(text)
+    while i < n:
+        # Footnote bodies: reset depth to 0 (independent quotation context)
+        fn_trig = next((t for t in _FN_TRIGGERS if text[i:i + len(t)] == t), None)
+        if fn_trig:
+            j = i + len(fn_trig)
+            d = 1
+            while j < n and d > 0:
+                if   text[j] == '{': d += 1
+                elif text[j] == '}': d -= 1
+                j += 1
+            body = _replace_enquote(text[i + len(fn_trig):j - 1], 0)
+            out.append(fn_trig + body + '}')
+            i = j
+        elif text[i:i + len(_ENQUOTE)] == _ENQUOTE:
             j = i + len(_ENQUOTE)
             d = 1
-            while j < len(text) and d > 0:
-                if text[j] == '{':
-                    d += 1
-                elif text[j] == '}':
-                    d -= 1
+            while j < n and d > 0:
+                if   text[j] == '{': d += 1
+                elif text[j] == '}': d -= 1
                 j += 1
             inner = _replace_enquote(text[i + len(_ENQUOTE):j - 1], depth + 1)
             out.append(open_q + inner + close_q)

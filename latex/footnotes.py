@@ -100,20 +100,60 @@ def _scan_footnotes(text: str, htmlonly: bool) -> tuple[str, list[tuple[str, str
                 f' class="footnote-ref">[{fn_num}]</a>'
             )
         else:
-            # Inline: end current paragraph, insert footnote, new paragraph continues
-            out.append(f'\n\n<p class="{best_kind}-inline">{body}</p>\n\n')
+            # Inline: split body on blank lines so build_paragraphs cannot
+            # tear the block apart and strip the CSS class from continuations.
+            paras = [p.strip() for p in _PARA_SPLIT.split(body) if p.strip()]
+            elems = []
+            last = len(paras) - 1
+            for i, p in enumerate(paras):
+                if best_kind == 'pfootnote':
+                    css = 'pfootnote-inline' if i == 0 else 'pfootnote-inline-continuation'
+                else:
+                    css = 'footnote-inline'
+                if i == last:
+                    css += ' fn-inline-end'
+                elems.append(f'<p class="{css}">{p}</p>')
+            out.append('\n\n' + '\n'.join(elems) + '\n\n')
 
         i = j
 
     return ''.join(out), footnotes
 
 
+_PARA_SPLIT = re.compile(r'\n[ \t]*\n+')
+
+
 def _footnotes_html(footnotes: list[tuple[str, str]]) -> str:
-    """Build HTML for the collected footnotes section."""
+    """Build HTML for the collected footnotes section.
+
+    Multi-paragraph bodies (blank-line separated) are split into separate
+    <p> elements so that build_paragraphs cannot tear them apart later.
+
+    pfootnote:  first paragraph → p.pfootnote (no indent)
+                subsequent     → p.pfootnote-continuation (text-indent)
+    footnote:   all paragraphs → p.footnote (standard paragraph spacing)
+    """
     parts = []
     for num, (kind, body) in enumerate(footnotes, 1):
         backref = f'<a href="#fnref-{num}" class="footnote-backref">&#11014;</a>'
-        parts.append(f'<p class="{kind}" id="fn-{num}">[{num}] {body} {backref}</p>')
+        paras = [p.strip() for p in _PARA_SPLIT.split(body) if p.strip()]
+        if not paras:
+            continue
+
+        for idx, para in enumerate(paras):
+            is_first = idx == 0
+            is_last  = idx == len(paras) - 1
+            suffix   = f' {backref}' if is_last else ''
+
+            if kind == 'pfootnote':
+                css = 'pfootnote' if is_first else 'pfootnote-continuation'
+            else:
+                css = 'footnote'
+
+            id_attr = f' id="fn-{num}"' if is_first else ''
+            prefix  = f'[{num}] '       if is_first else ''
+            parts.append(f'<p class="{css}"{id_attr}>{prefix}{para}{suffix}</p>')
+
     return '\n'.join(parts)
 
 

@@ -217,13 +217,11 @@ def convert_quotehebrew(text: str, hebrew_class: str = 'hebrew') -> str:
         j        = _skip_to_arg(j)
         arg3, j  = _brace_arg(j)
 
-        if arg2.strip():
-            out.append(
-                f'<span class="{hebrew_class}">{arg2}</span>'
-                f' <span class="transliteration">{arg3}</span>'
-            )
-        else:
-            out.append(f'{arg1} <span class="transliteration">{arg3}</span>')
+        hebrew = arg2 if arg2.strip() else arg1
+        out.append(
+            f'<span class="{hebrew_class}">{hebrew}</span>'
+            f' <span class="transliteration">{arg3}</span>'
+        )
 
         i = j
 

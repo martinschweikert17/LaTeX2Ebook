@@ -27,6 +27,7 @@ import re
 
 # Must be tried before single-char to avoid /s being read as two chars
 _TWO_CHAR: dict[str, str] = {
+    '--': '־',   # ־ maqqef (Hebrew word-joining punctuation, U+05BE)
     '/s': 'שׁ',  # שׁ shin (with shin dot)
     '/S': 'שׂ',  # שׂ sin  (with sin dot)
 }

@@ -219,8 +219,15 @@
       text-align: left;
     }
 
-    /* \pfootnote – paragraphs run together; first word of each is indented */
+    /* \pfootnote – first paragraph flush, continuations indented, no gap */
     p.pfootnote {
+      font-size: 0.85em;
+      margin-top: 0.4em;
+      margin-bottom: 0;
+      text-align: left;
+    }
+
+    p.pfootnote-continuation {
       font-size: 0.85em;
       margin-top: 0;
       margin-bottom: 0;
@@ -242,10 +249,24 @@
       font-size: 0.85em;
       margin-left: 2em;
       margin-right: 2em;
+      margin-top: 0.3em;
+      margin-bottom: 0;
+      text-align: left;
+    }
+
+    p.pfootnote-inline-continuation {
+      font-size: 0.85em;
+      margin-left: 2em;
+      margin-right: 2em;
       margin-top: 0;
       margin-bottom: 0;
       text-indent: 1.5em;
       text-align: left;
+    }
+
+    /* Last paragraph of any inline footnote: restore standard bottom gap */
+    p.fn-inline-end {
+      margin-bottom: 0.8em;
     }
 
     /* ------------------------------------------------------------------ */
