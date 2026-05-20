@@ -247,6 +247,7 @@ def apply_formatting(text: str) -> str:
         text = _replace_cmd(text, f'\\{cmd}', f'<span class="{cls}">', '</span>')
     text = _personname_to_html(text)
     text = _XLTABULAR.sub(lambda m: _xltabular_to_html(m.group(1)), text)
+    text = text.replace('\\\\', '<br/>')
     return text
 
 
