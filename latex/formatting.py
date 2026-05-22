@@ -239,6 +239,7 @@ def apply_formatting(text: str) -> str:
 
     text = _replace_cmd(text, r'\centerline', '<p class="centerline">', '</p>')
     text = _replace_cmd(text, r'\minisec',   '<p class="minisec">',    '</p>')
+    text = _replace_cmd(text, r'\paragraph', '<p class="minisec">',    '</p>')
     text = _replace_cmd(text, r'\textbf', '<strong>', '</strong>')
     text = _replace_cmd(text, r'\textit', '<i>', '</i>')
     text = _replace_textcolor(text)

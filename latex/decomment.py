@@ -12,9 +12,10 @@ Strips LaTeX comments before further processing. Three classes are handled:
              '\\%' (escaped percent) is never treated as a comment start.
 
   Class 2 – Full-line comments
-             Lines whose first non-whitespace character is '%' are removed
-             entirely. Covers plain '%', '%%', '%%%', separator lines
-             ('%%%%…'), and %%BLOCK / %%TEXTBLOCK markers (class 3).
+             Lines whose first non-whitespace character is '%' are eliminated
+             entirely (including the line ending). Covers plain '%', '%%',
+             '%%%', separator lines ('%%%%…'), and %%BLOCK / %%TEXTBLOCK
+             markers (class 3).
 
   Class 3 – %%BLOCK / %%TEXTBLOCK markers
              Subsumed by class 2.
@@ -82,9 +83,8 @@ def _remove_comments(text: str) -> str:
         content = line.rstrip('\n\r')
         eol     = line[len(content):]
 
-        # Class 2 + 3: full-line comment — drop content, keep line ending
+        # Class 2 + 3: full-line comment — drop the entire line
         if _FULL_LINE.match(content):
-            out.append(eol)
             continue
 
         # Class 1: inline comment — strip from first unescaped %,

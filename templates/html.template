@@ -186,6 +186,47 @@
     span.personname { {personname_css} }
     a.fullref { display: inline-block; vertical-align: baseline; white-space: nowrap; }
     a.fullref span.fullref-title { {fullreftitle_css} }
+    a.citetitle { font-style: italic; }
+
+    /* ------------------------------------------------------------------ */
+    /* Literature list                                                      */
+    /* ------------------------------------------------------------------ */
+
+    /* ------------------------------------------------------------------ */
+    /* Table of contents                                                    */
+    /* ------------------------------------------------------------------ */
+
+    nav.toc {
+      margin: 1em 0 2em 0;
+    }
+
+    p.toc-entry {
+      margin: 0.15em 0;
+      text-align: left;
+    }
+
+    p.toc-part {
+      font-weight: bold;
+      margin-top: 0.6em;
+    }
+
+    p.toc-chapter    { padding-left: 0; }
+    p.toc-section    { padding-left: 1.5em; }
+    p.toc-subsection { padding-left: 3.0em; }
+    p.toc-subsubsection { padding-left: 4.5em; }
+
+    /* ------------------------------------------------------------------ */
+    /* Literature list                                                      */
+    /* ------------------------------------------------------------------ */
+
+    p.literature-entry {
+      margin-top: 0;
+      margin-bottom: 0.6em;
+      text-indent: -1.5em;
+      padding-left: 1.5em;
+      overflow-wrap: break-word;
+      text-align: left;
+    }
 
     span.versenumber {
       vertical-align: super;
@@ -280,6 +321,7 @@
       unicode-bidi: embed;       /* isolate the RTL run inside LTR context */
       font-family: "SBL Hebrew", "Ezra SIL", "David", serif;
       font-size: {hebrewfontsize};
+      font-weight: bold;
     }
 
     /* Hebrew inside footnotes – slightly larger than footnote font size */
@@ -288,6 +330,7 @@
       unicode-bidi: embed;
       font-family: "SBL Hebrew", "Ezra SIL", "David", serif;
       font-size: 1.1em;          /* relative to p.footnote's 0.85em */
+      font-weight: bold;
     }
 
     /* ------------------------------------------------------------------ */

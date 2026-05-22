@@ -104,7 +104,7 @@ def _build_number(level: str, counters: dict, styles: dict) -> str:
 
 # Matches \part, \chapter* etc., optional [short title], opening { of long title
 _HEADING_CMD = re.compile(
-    r'\\(part|chapter|section|subsection|subsubsection)(\*)?'
+    r'\\(notoc)?(part|chapter|section|subsection|subsubsection)(\*)?'
     r'\s*(?:\[[^\]]*\])?\s*\{'
 )
 
@@ -115,10 +115,19 @@ _LABEL_AFTER = re.compile(r'\s*\\label\{([^}]+)\}')
 # Reset at the start of each convert_headings() call.
 _label_map: dict[str, dict[str, str]] = {}
 
+# Ordered list of all headings for TOC generation.
+# Each entry: {'level': str, 'num': str, 'title': str, 'id': str}
+_toc_entries: list[dict] = []
+
 
 def get_label_map() -> dict[str, dict[str, str]]:
     """Return the label map built by the most recent convert_headings() call."""
     return _label_map
+
+
+def get_toc_entries() -> list[dict]:
+    """Return the ordered heading list built by the most recent convert_headings() call."""
+    return _toc_entries
 
 
 def convert_headings(text: str) -> str:
@@ -127,16 +136,18 @@ def convert_headings(text: str) -> str:
     \\label{name} immediately following a heading is consumed: the heading
     receives id="name" and the label is recorded for cross-reference resolution.
     """
-    global _label_map
-    _label_map = {}
+    global _label_map, _toc_entries
+    _label_map  = {}
+    _toc_entries = []
 
     cfg      = Config.get()
     styles   = cfg.heading_numbering
     counters = {level: 0 for level in _HEADING_LEVELS}
 
-    out = []
-    i   = 0
-    n   = len(text)
+    out     = []
+    i       = 0
+    n       = len(text)
+    auto_id = 0
 
     while i < n:
         m = _HEADING_CMD.search(text, i)
@@ -145,8 +156,9 @@ def convert_headings(text: str) -> str:
             break
 
         out.append(text[i:m.start()])
-        level   = m.group(1)
-        starred = m.group(2) is not None
+        notoc   = m.group(1) is not None   # True for \notoc* variants
+        level   = m.group(2)
+        starred = m.group(3) is not None
 
         # Brace-count to extract the title (handles nested {…} inside)
         j     = m.end()
@@ -165,10 +177,17 @@ def convert_headings(text: str) -> str:
         if lm:
             j = lm.end()
 
-        id_attr = f' id="{label_name}"' if label_name else ''
+        if label_name:
+            hid = label_name
+        else:
+            auto_id += 1
+            hid = f'toc-{auto_id}'
+        id_attr = f' id="{hid}"'
 
-        if starred:
+        if starred or notoc:
             out.append(f'<{tag}{id_attr}>{title}</{tag}>')
+            if not notoc:
+                _toc_entries.append({'level': level, 'num': '', 'title': title, 'id': hid})
         else:
             level_idx = _HEADING_LEVELS.index(level)
             counters[level] += 1
@@ -181,6 +200,8 @@ def convert_headings(text: str) -> str:
                 out.append(f'<{tag}{id_attr}>{num} {title}</{tag}>')
             else:
                 out.append(f'<{tag}{id_attr}>{title}</{tag}>')
+
+            _toc_entries.append({'level': level, 'num': num, 'title': title, 'id': hid})
 
             if label_name:
                 _label_map[label_name] = {'num': num, 'title': title, 'tag': tag}

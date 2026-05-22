@@ -188,6 +188,7 @@ class Config:
             "personnameformat":  "text-transform: uppercase; font-size: 85%;",
             "biblerefstyle":              "LThK",
             "biblerefformat":             "kurz",
+            "bib_file":                   "",
             "translations":               "",
             "jhwh":                       "Jahwe",
             "numbering_part":             "roman_upper",
@@ -223,6 +224,7 @@ class Config:
             ("GENERAL", "Target"): ("target", str),
             ("LOGGING", "LogFile"): ("log_file", str),
             ("LOGGING", "LogLevel"): ("log_level", str),
+            ("PATHS", "BibFile"):         ("bib_file",        str),
             ("PATHS", "InputDirectory"): ("input_directory", str),
             ("PATHS", "InputFile"): ("input_file", str),
             ("PATHS", "OutputDirectory"):  ("output_directory", str),
@@ -511,6 +513,10 @@ class Config:
             "subsection":    self._data["numbering_subsection"],
             "subsubsection": self._data["numbering_subsubsection"],
         }
+
+    @property
+    def bib_file(self) -> str:
+        return self._data["bib_file"]
 
     @property
     def translations(self) -> Path:
