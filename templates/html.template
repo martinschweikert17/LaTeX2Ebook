@@ -140,6 +140,10 @@
       text-align: center;
     }
 
+    div.flushright {
+      text-align: right;
+    }
+
     p.minisec {
       font-family: sans-serif;
       font-size: 1.0em;
@@ -184,6 +188,7 @@
     span.transliteration { {transliteration_css} }
     span.verseemphasis { {verseemphasis_css} }
     span.personname { {personname_css} }
+    span.smallcaps  { {smallcaps_css} }
     a.fullref { display: inline-block; vertical-align: baseline; white-space: nowrap; }
     a.fullref span.fullref-title { {fullreftitle_css} }
     a.citetitle { font-style: italic; }
@@ -374,6 +379,10 @@
       border-collapse: collapse;
       width: 100%;
       margin-bottom: 1em;
+    }
+
+    table.tabular {
+      width: auto;
     }
 
     th, td {

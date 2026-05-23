@@ -186,6 +186,7 @@ class Config:
             "transliteration":   "font-style: italic;",
             "verseemphasis":     "font-weight: bold;",
             "personnameformat":  "text-transform: uppercase; font-size: 85%;",
+            "smallcapsformat":  "text-transform: uppercase; font-size: 85%;",
             "biblerefstyle":              "LThK",
             "biblerefformat":             "kurz",
             "bib_file":                   "",
@@ -232,6 +233,7 @@ class Config:
             ("PATHS", "Translations"):     ("translations",     str),
             ("EBOOK", "YHWH"):             ("jhwh",             str),
             ("EBOOK", "PersonNameFormat"): ("personnameformat",  str),
+            ("EBOOK", "SmallCaps"):        ("smallcapsformat",   str),
             ("EBOOK", "BibleRefStyle"):             ("biblerefstyle",           str),
             ("EBOOK", "BibleRefFormat"):            ("biblerefformat",          str),
             ("EBOOK", "NumberingPart"):             ("numbering_part",          str),
@@ -505,6 +507,10 @@ class Config:
     @property
     def person_name_format(self) -> str:
         return self._data["personnameformat"]
+
+    @property
+    def small_caps_format(self) -> str:
+        return self._data["smallcapsformat"]
 
     @property
     def heading_numbering(self) -> dict[str, str]:

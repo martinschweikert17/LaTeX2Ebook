@@ -286,8 +286,14 @@ _XLTABULAR = re.compile(
     r'\\begin\{xltabular\}\{[^}]*\}\{[^}]*\}(.*?)\\end\{xltabular\}',
     re.DOTALL,
 )
+_XLTAB_SECTION = re.compile(r'\\(?:endfirsthead|endhead|endfoot|endlastfoot)\b')
+_XLTAB_CAPTION = re.compile(r'\\caption\*?(?:\[[^\]]*\])?\{((?:[^{}]|\{[^{}]*\})*)\}')
+_XLTAB_LABEL   = re.compile(r'\\label\{([^}]+)\}')
 
-_ITEMIZE     = re.compile(r'\\begin\{itemize\}(.*?)\\end\{itemize\}',       re.DOTALL)
+_FLUSHRIGHT  = re.compile(r'\\begin\{flushright\}(.*?)\\end\{flushright\}',   re.DOTALL)
+_QUOTE       = re.compile(r'\\begin\{quote\}(.*?)\\end\{quote\}',             re.DOTALL)
+_TABULAR     = re.compile(r'\\begin\{tabular\}\{([^}]*)\}(.*?)\\end\{tabular\}', re.DOTALL)
+_ITEMIZE     = re.compile(r'\\begin\{itemize\}(.*?)\\end\{itemize\}',         re.DOTALL)
 _ENUMERATE   = re.compile(r'\\begin\{enumerate\}(?:\[([^\]]*)\])?(.*?)\\end\{enumerate\}', re.DOTALL)
 _DESCRIPTION = re.compile(r'\\begin\{description\}(.*?)\\end\{description\}', re.DOTALL)
 _ITEM        = re.compile(r'[ \t]*\\item(?:\[[^\]]*\])?\s*')
@@ -381,25 +387,34 @@ def _replace_textcolor(text: str) -> str:
     return ''.join(out)
 
 
-def _format_personname(content: str) -> str:
-    """Wrap lowercase runs in <span class="personname">; uppercase/non-alpha chars pass through."""
-    result = []
-    i = 0
-    while i < len(content):
-        if content[i].islower():
-            j = i + 1
-            while j < len(content) and content[j].islower():
-                j += 1
-            result.append(f'<span class="personname">{content[i:j]}</span>')
-            i = j
-        else:
-            result.append(content[i])
-            i += 1
-    return ''.join(result)
+def _make_smallcaps_formatter(css_class: str):
+    """Return a formatter that wraps lowercase runs in <span class=css_class>."""
+    def _fmt(content: str) -> str:
+        result = []
+        i = 0
+        while i < len(content):
+            if content[i].islower():
+                j = i + 1
+                while j < len(content) and content[j].islower():
+                    j += 1
+                result.append(f'<span class="{css_class}">{content[i:j]}</span>')
+                i = j
+            else:
+                result.append(content[i])
+                i += 1
+        return ''.join(result)
+    return _fmt
+
+_format_personname = _make_smallcaps_formatter('personname')
+_format_smallcaps  = _make_smallcaps_formatter('smallcaps')
 
 
 def _personname_to_html(text: str) -> str:
     return _replace_cmd_fn(text, r'\personenname', _format_personname)
+
+
+def _textsc_to_html(text: str) -> str:
+    return _replace_cmd_fn(text, r'\textsc', _format_smallcaps)
 
 
 def _replace_cmd_fn(text: str, cmd: str, fn) -> str:
@@ -425,15 +440,83 @@ def _replace_cmd_fn(text: str, cmd: str, fn) -> str:
     return ''.join(out)
 
 
-def _xltabular_to_html(body: str) -> str:
+def _tabular_to_html(col_spec: str, body: str) -> str:
+    # Extract l/c/r alignment chars; ignore | and @{...} decorators
+    aligns = [c for c in col_spec if c in 'lcr']
+    _align_style = {'c': ' style="text-align:center;"', 'r': ' style="text-align:right;"'}
+
     rows_html = []
     for row in re.split(r'\\\\\s*', body):
-        row = row.strip()
-        if '&' not in row:
+        row = re.sub(r'\\hline\b', '', row).strip()
+        if not row or '&' not in row:
             continue
-        td1, td2 = (c.strip() for c in row.split('&', 1))
-        rows_html.append(f'<tr><td>{td1}</td><td>{td2}</td></tr>')
-    return '<table>\n' + '\n'.join(rows_html) + '\n</table>' if rows_html else ''
+        cells = [c.strip() for c in re.split(r'&(?![a-zA-Z0-9]+;|#)', row)]
+        tds = []
+        for idx, cell in enumerate(cells):
+            style = _align_style.get(aligns[idx] if idx < len(aligns) else 'l', '')
+            tds.append(f'<td{style}>{cell}</td>')
+        rows_html.append('<tr>' + ''.join(tds) + '</tr>')
+    return '<table class="tabular">\n' + '\n'.join(rows_html) + '\n</table>' if rows_html else ''
+
+
+_XLTAB_ROWCOLOR = re.compile(r'\\rowcolor\{([^}]*)\}')
+
+
+def _clean_xltab_content(content: str) -> str:
+    content = re.sub(r'\\hline\b', '', content)
+    content = re.sub(r'\\caption\*?(?:\[[^\]]*\])?\{(?:[^{}]|\{[^{}]*\})*\}', '', content)
+    content = re.sub(r'\\label\{[^}]+\}', '', content)
+    content = _replace_cmd_fn(content, r'\raggedright', lambda x: x)
+    content = re.sub(r'\\raggedright\b', '', content)
+    return content
+
+
+def _xltabular_rows(content: str, tag: str) -> list:
+    content = _clean_xltab_content(content)
+    rows = []
+    for row in re.split(r'\\\\\s*', content):
+        row = row.strip()
+        if not row or '&' not in row:
+            continue
+        rc = _XLTAB_ROWCOLOR.search(row)
+        cell_style = f' style="background-color:{rc.group(1)};"' if rc else ''
+        row = _XLTAB_ROWCOLOR.sub('', row).strip()
+        # Split on & that is NOT the start of an HTML entity (&name; or &#…;)
+        cells = [c.strip() for c in re.split(r'&(?![a-zA-Z0-9]+;|#)', row)]
+        tds = ''.join(f'<{tag}{cell_style}>{cell}</{tag}>' for cell in cells)
+        rows.append(f'<tr>{tds}</tr>')
+    return rows
+
+
+def _xltabular_to_html(body: str) -> str:
+    body = re.sub(r'(?<!\\)%[^\n]*', '', body)
+    markers = list(_XLTAB_SECTION.finditer(body))
+    if markers:
+        firsthead = body[:markers[0].start()]
+        data      = body[markers[-1].end():]
+    else:
+        firsthead = ''
+        data      = body
+    caption_html = ''
+    label_out    = ''
+    cap_m = _XLTAB_CAPTION.search(firsthead)
+    if cap_m:
+        caption_html = f'<caption>{cap_m.group(1)}</caption>\n'
+    lab_m = _XLTAB_LABEL.search(firsthead)
+    if lab_m:
+        label_out = f'\\label{{{lab_m.group(1)}}}\n'
+    head_rows = _xltabular_rows(firsthead, 'th')
+    data_rows = _xltabular_rows(data, 'td')
+    parts = []
+    if caption_html:
+        parts.append(caption_html)
+    if head_rows:
+        parts.append('<thead>\n' + '\n'.join(head_rows) + '\n</thead>\n')
+    if data_rows:
+        parts.append('<tbody>\n' + '\n'.join(data_rows) + '\n</tbody>\n')
+    if not parts:
+        return ''
+    return label_out + '<table>\n' + ''.join(parts) + '</table>'
 
 
 def convert_quotehebrew(text: str, hebrew_class: str = 'hebrew') -> str:
@@ -492,13 +575,16 @@ def convert_quotehebrew(text: str, hebrew_class: str = 'hebrew') -> str:
 
 def apply_formatting(text: str) -> str:
 
+    text = _FLUSHRIGHT.sub(lambda m: f'<div class="flushright">{m.group(1)}</div>', text)
     text = _ITEMIZE.sub(lambda m: _itemize_to_html(m.group(1), 'ul'), text)
     text = _ENUMERATE.sub(
         lambda m: _itemize_to_html(m.group(2), 'ol', _enumerate_type(m.group(1))), text
     )
     text = _DESCRIPTION.sub(lambda m: _description_to_html(m.group(1)), text)
     text = _BIBLEVERSEFORMAT.sub(lambda m: f'<p class="quotation">{m.group(1)}</p>', text)
+    text = _QUOTE.sub(          lambda m: f'<p class="quotation">{m.group(1)}</p>', text)
 
+    text = _eliminate_cmd(text, r'\needspace')
     text = _replace_cmd(text, r'\centerline', '<p class="centerline">', '</p>')
     text = _replace_cmd(text, r'\textbf', '<strong>', '</strong>')
     text = _replace_cmd(text, r'\textit', '<i>', '</i>')
@@ -507,6 +593,9 @@ def apply_formatting(text: str) -> str:
     for cmd, cls in _SPAN_COMMANDS:
         text = _replace_cmd(text, f'\\{cmd}', f'<span class="{cls}">', '</span>')
     text = _personname_to_html(text)
+    text = _textsc_to_html(text)
+    text = _replace_cmd_fn(text, r'\shortstack', lambda s: s.replace('\\\\', '<br/>'))
+    text = _TABULAR.sub(  lambda m: _tabular_to_html(m.group(1), m.group(2)), text)
     text = _XLTABULAR.sub(lambda m: _xltabular_to_html(m.group(1)), text)
     text = text.replace('\\\\', '<br/>')
 

@@ -37,9 +37,47 @@ Usage
 """
 
 import logging
+import re
 from pathlib import Path
 
 from config import Config
+
+# Tags whose opening tag alone (without closing tag on same line) widens the indent.
+_PRETTY_OPEN  = re.compile(
+    r'^<(?:html|head|body|style|nav|div|table|thead|tbody|tfoot|tr|ul|ol|dl)\b[^>]*/?>$',
+    re.IGNORECASE,
+)
+_PRETTY_CLOSE = re.compile(
+    r'^</(?:html|head|body|style|nav|div|table|thead|tbody|tfoot|tr|ul|ol|dl)>$',
+    re.IGNORECASE,
+)
+
+
+def _pretty_print(html: str) -> str:
+    """Indent HTML for readability.
+
+    Works on already-structured HTML where each element is on its own line,
+    which is what our pipeline produces.  Does not attempt to re-wrap content.
+    """
+    lines = html.replace('\r\n', '\n').split('\n')
+    out   = []
+    depth = 0
+    pad   = '  '
+    for line in lines:
+        s = line.strip()
+        if not s:
+            continue
+        if _PRETTY_CLOSE.match(s):
+            depth = max(0, depth - 1)
+            out.append(pad * depth + s)
+        elif _PRETTY_OPEN.match(s):
+            out.append(pad * depth + s)
+            depth += 1
+        else:
+            if s.startswith('<p') and out:
+                out.append('')
+            out.append(pad * depth + s)
+    return '\n'.join(out) + '\n'
 
 _TEMPLATE = Path(__file__).parent.parent / "templates" / "html.template"
 
@@ -83,7 +121,7 @@ class HtmlConverter:
 
         self._logger.info("Converting to HTML: %s", out_path)
 
-        html = self._build_page(raw, lang.lower())
+        html = _pretty_print(self._build_page(raw, lang.lower()))
         out_path.write_text(html, encoding="utf-8")
 
         self._logger.info("HTML written: %s", out_path)
@@ -117,6 +155,7 @@ class HtmlConverter:
         transliteration_css = cfg.transliteration
         verseemphasis_css   = cfg.verse_emphasis
         personname_css      = cfg.person_name_format
+        smallcaps_css       = cfg.small_caps_format
 
         template = _TEMPLATE.read_text(encoding="utf-8")
         return (template
@@ -143,6 +182,7 @@ class HtmlConverter:
                 .replace("{transliteration_css}", transliteration_css)
                 .replace("{verseemphasis_css}",   verseemphasis_css)
                 .replace("{personname_css}",      personname_css)
+                .replace("{smallcaps_css}",       smallcaps_css)
                 .replace("{greekfontsize}",       cfg.greek_font_size)
                 .replace("{hebrewfontsize}",      cfg.hebrew_font_size)
                 .replace("{body}",                raw))
