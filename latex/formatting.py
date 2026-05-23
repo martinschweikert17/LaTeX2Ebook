@@ -67,9 +67,7 @@ _LATEX_SPECIALS: list[tuple[str, str]] = [
     (r'\textunderscore',     '_'),
     (r'\textyen',            '¥'),
 
-    # -- Em/en dashes (longer form first) ----------------------------------
-    ('---', '—'),
-    ('--',  '–'),
+    # -- Em/en dashes: handled by convert_expressions; kept as fallback ----
 
     # -- LaTeX reserved characters -----------------------------------------
     (r'\&',  '&amp;'),
@@ -93,7 +91,7 @@ _LATEX_SPECIALS: list[tuple[str, str]] = [
     # -- Symbols that are prefixes of special letters (must precede them) --
     (r'\ddag',  '‡'),   # before \dag
     (r'\dag',   '†'),
-    (r'\ldots', '…'),   # before \l
+    # \ldots handled by convert_expressions
     (r'\dots',  '…'),
 
     # -- Unbraced special letters (longer forms first within each group) ---
@@ -248,7 +246,7 @@ _LATEX_SPECIALS: list[tuple[str, str]] = [
 
     # -- Spacing / invisible commands --------------------------------------
     (r'\ ',  ' '),  # explicit space -> non-breaking space
-    (r'\,',  ' '),  # thin space -> narrow no-break space
+    # \, handled by convert_expressions
     (r'\;',  ' '),
     (r'\:',  ' '),
     (r'\!',  ''),
@@ -261,7 +259,7 @@ _LATEX_SPECIALS: list[tuple[str, str]] = [
     ('{]}', ']'),
 
     # -- Non-breaking space (tie) ------------------------------------------
-    ('~', ' '),
+    # ~ handled by convert_expressions
 ]
 
 # Alphabetic LaTeX commands (\l, \ss, \ldots, ...) must only match when NOT
@@ -283,7 +281,11 @@ _BIBLEVERSEFORMAT = re.compile(
 )
 
 _XLTABULAR = re.compile(
-    r'\\begin\{xltabular\}\{[^}]*\}\{[^}]*\}(.*?)\\end\{xltabular\}',
+    r'\\begin\{xltabular\}'
+    r'(?:\[[^\]]*\])?'                               # optional [opt]
+    r'\{(?:[^{}]|\{[^{}]*\})*\}'                     # {width}
+    r'\{(?P<colspec>(?:[^{}]|\{[^{}]*\})*)\}'        # {colspec} — captured
+    r'(?P<body>.*?)\\end\{xltabular\}',              # body   — captured
     re.DOTALL,
 )
 _XLTAB_SECTION = re.compile(r'\\(?:endfirsthead|endhead|endfoot|endlastfoot)\b')
@@ -471,7 +473,11 @@ def _clean_xltab_content(content: str) -> str:
     return content
 
 
-def _xltabular_rows(content: str, tag: str) -> list:
+_XLTAB_ALIGN = {'c': 'text-align:center', 'C': 'text-align:center',
+                'r': 'text-align:right',  'R': 'text-align:right'}
+
+
+def _xltabular_rows(content: str, tag: str, aligns: list = None) -> list:
     content = _clean_xltab_content(content)
     rows = []
     for row in re.split(r'\\\\\s*', content):
@@ -479,16 +485,34 @@ def _xltabular_rows(content: str, tag: str) -> list:
         if not row or '&' not in row:
             continue
         rc = _XLTAB_ROWCOLOR.search(row)
-        cell_style = f' style="background-color:{rc.group(1)};"' if rc else ''
+        bg = f'background-color:{rc.group(1)}' if rc else ''
         row = _XLTAB_ROWCOLOR.sub('', row).strip()
         # Split on & that is NOT the start of an HTML entity (&name; or &#…;)
         cells = [c.strip() for c in re.split(r'&(?![a-zA-Z0-9]+;|#)', row)]
-        tds = ''.join(f'<{tag}{cell_style}>{cell}</{tag}>' for cell in cells)
-        rows.append(f'<tr>{tds}</tr>')
+        tds = []
+        for idx, cell in enumerate(cells):
+            style_parts = []
+            if bg:
+                style_parts.append(bg)
+            if aligns and idx < len(aligns):
+                al = _XLTAB_ALIGN.get(aligns[idx], '')
+                if al:
+                    style_parts.append(al)
+            style = f' style="{";".join(style_parts)}"' if style_parts else ''
+            tds.append(f'<{tag}{style}>{cell}</{tag}>')
+        rows.append(f'<tr>{"".join(tds)}</tr>')
     return rows
 
 
-def _xltabular_to_html(body: str) -> str:
+def _xltabular_to_html(body: str, colspec: str = '') -> str:
+    # Extract only top-level column type chars; skip chars inside {…} decorators
+    aligns = []
+    _depth = 0
+    for _ch in colspec:
+        if _ch == '{':   _depth += 1
+        elif _ch == '}': _depth -= 1
+        elif _depth == 0 and _ch in 'lLcCrR':
+            aligns.append(_ch)
     body = re.sub(r'(?<!\\)%[^\n]*', '', body)
     markers = list(_XLTAB_SECTION.finditer(body))
     if markers:
@@ -504,9 +528,9 @@ def _xltabular_to_html(body: str) -> str:
         caption_html = f'<caption>{cap_m.group(1)}</caption>\n'
     lab_m = _XLTAB_LABEL.search(firsthead)
     if lab_m:
-        label_out = f'\\label{{{lab_m.group(1)}}}\n'
-    head_rows = _xltabular_rows(firsthead, 'th')
-    data_rows = _xltabular_rows(data, 'td')
+        label_out = f'\\label{{{lab_m.group(1)}}}\n\n'   # blank line → own block in build_paragraphs
+    head_rows = _xltabular_rows(firsthead, 'th', aligns)
+    data_rows = _xltabular_rows(data, 'td', aligns)
     parts = []
     if caption_html:
         parts.append(caption_html)
@@ -596,7 +620,7 @@ def apply_formatting(text: str) -> str:
     text = _textsc_to_html(text)
     text = _replace_cmd_fn(text, r'\shortstack', lambda s: s.replace('\\\\', '<br/>'))
     text = _TABULAR.sub(  lambda m: _tabular_to_html(m.group(1), m.group(2)), text)
-    text = _XLTABULAR.sub(lambda m: _xltabular_to_html(m.group(1)), text)
+    text = _XLTABULAR.sub(lambda m: _xltabular_to_html(m.group('body'), m.group('colspec')), text)
     text = text.replace('\\\\', '<br/>')
 
     for item, uni in _COMPILED_SPECIALS:

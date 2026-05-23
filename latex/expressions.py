@@ -98,18 +98,18 @@ def convert_expressions(raw: str) -> str:
     replacements = {
         r'{\szquoted}': cfg.szquoted,
         r'{\sz}':       cfg.sz,
-        '---':          '&mdash;',
-        '--':           '&ndash;',
-        r'\ldots':      '&hellip;',
-        r'\,':          '&thinsp;',
-        r'\thinspace':  '&thinsp;',
+        '---':          '—',   # em dash  —
+        '--':           '–',   # en dash  –
+        r'\ldots':      '…',   # ellipsis …
+        r'\,':          ' ',   # narrow no-break space
+        r'\thinspace':  ' ',   # narrow no-break space
         r'\bigskip':    '<br/>',
         r'\medskip':    '<br/>',
         r'\-':          '',
         r'\S':          '§',
         r'{\euml}':     'ë',
         r'{\prozent}':  '%',
-        '~':            '&nbsp;',
+        '~':            ' ',   # non-breaking space
     }
     for old, new in replacements.items():
         result = result.replace(old, new)
@@ -199,7 +199,7 @@ def build_paragraphs(text: str) -> str:
 
 
 # Outer quotes: „ ... "   Inner quotes: ‚ ... '
-_QUOTES = [('&bdquo;', '&ldquo;'), ('&sbquo;', '&lsquo;')]
+_QUOTES = [("„", "“"), ("‚", "‘")]
 
 _ENQUOTE = r'\enquote{'
 
