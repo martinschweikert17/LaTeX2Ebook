@@ -102,9 +102,11 @@ def _build_number(level: str, counters: dict, styles: dict) -> str:
     return '.'.join(parts)
 
 
-# Matches \part, \chapter* etc., optional [short title], opening { of long title
+# Matches \appendix or heading commands (\part, \chapter* etc.)
 _HEADING_CMD = re.compile(
-    r'\\(notoc)?(part|chapter|section|subsection|subsubsection)(\*)?'
+    r'\\appendix\b'
+    r'|'
+    r'\\(?P<notoc>notoc)?(?P<level>part|chapter|section|subsection|subsubsection)(?P<starred>\*)?'
     r'\s*(?:\[[^\]]*\])?\s*\{'
 )
 
@@ -140,9 +142,10 @@ def convert_headings(text: str) -> str:
     _label_map  = {}
     _toc_entries = []
 
-    cfg      = Config.get()
-    styles   = cfg.heading_numbering
-    counters = {level: 0 for level in _HEADING_LEVELS}
+    cfg               = Config.get()
+    styles            = cfg.heading_numbering
+    appendices_style  = cfg.appendices_numbering
+    counters          = {level: 0 for level in _HEADING_LEVELS}
 
     out     = []
     i       = 0
@@ -156,9 +159,20 @@ def convert_headings(text: str) -> str:
             break
 
         out.append(text[i:m.start()])
-        notoc   = m.group(1) is not None   # True for \notoc* variants
-        level   = m.group(2)
-        starred = m.group(3) is not None
+
+        # ── \appendix: switch chapter numbering style and reset counter ──
+        if m.group('level') is None:
+            styles  = dict(styles)
+            styles['chapter'] = appendices_style
+            counters['chapter'] = 0
+            for sub in _HEADING_LEVELS[_HEADING_LEVELS.index('chapter') + 1:]:
+                counters[sub] = 0
+            i = m.end()
+            continue
+
+        notoc   = m.group('notoc')   is not None
+        level   = m.group('level')
+        starred = m.group('starred') is not None
 
         # Brace-count to extract the title (handles nested {…} inside)
         j     = m.end()

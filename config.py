@@ -196,6 +196,7 @@ class Config:
             "numbering_section":          "arabic",
             "numbering_subsection":       "arabic",
             "numbering_subsubsection":    "arabic",
+            "numbering_appendices":       "alpha_upper",
         }
 
     # ------------------------------------------------------------------
@@ -238,6 +239,7 @@ class Config:
             ("EBOOK", "NumberingSection"):          ("numbering_section",       str),
             ("EBOOK", "NumberingSubsection"):       ("numbering_subsection",    str),
             ("EBOOK", "NumberingSubsubsection"):    ("numbering_subsubsection", str),
+            ("EBOOK", "NumberingAppendices"):       ("numbering_appendices",    str),
         }
 
         self._ini_keys: set[str] = set()
@@ -337,6 +339,7 @@ class Config:
             "numbering_section":       "NumberingSection",
             "numbering_subsection":    "NumberingSubsection",
             "numbering_subsubsection": "NumberingSubsubsection",
+            "numbering_appendices":    "NumberingAppendices",
         }
         for key, ini_name in _numbering_keys.items():
             val = self._data[key]
@@ -513,6 +516,10 @@ class Config:
             "subsection":    self._data["numbering_subsection"],
             "subsubsection": self._data["numbering_subsubsection"],
         }
+
+    @property
+    def appendices_numbering(self) -> str:
+        return self._data["numbering_appendices"]
 
     @property
     def bib_file(self) -> str:
