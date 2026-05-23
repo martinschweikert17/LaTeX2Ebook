@@ -33,6 +33,28 @@ def process_refs(text: str) -> str:
     """Resolve all cross-reference commands using the heading label map."""
     labels = get_label_map()
 
+    # \anchor{name}{title}: converter-native invisible anchor with a title.
+    # The LaTeX definition \newcommand{\anchor}[2]{\phantomsection\label{#1}}
+    # is multi-arg so expand_newcommands leaves the call sites intact.
+    def _register_anchor(m: re.Match) -> str:
+        name, title = m.group(1), m.group(2)
+        labels[name] = {'num': '', 'title': title, 'tag': 'span'}
+        return f'<span id="{name}"></span>'
+
+    text = re.sub(r'\\anchor\{([^}]+)\}\{([^}]*)\}', _register_anchor, text)
+
+    # Standalone \label{name} not consumed by convert_headings (e.g. after
+    # \paragraph which apply_formatting already converted, or mid-paragraph
+    # anchors): turn them into an invisible <span id> and register so that
+    # \ref / \fullref can still resolve them.
+    def _register_standalone(m: re.Match) -> str:
+        name = m.group(1)
+        if name not in labels:
+            labels[name] = {'num': '', 'title': '', 'tag': 'span'}
+        return f'<span id="{name}"></span>'
+
+    text = re.sub(r'\\label\{([^}]+)\}', _register_standalone, text)
+
     def _ref_link(name: str) -> str:
         if name in labels:
             info = labels[name]
@@ -44,6 +66,8 @@ def process_refs(text: str) -> str:
     def _fullref_link(name: str) -> str:
         if name in labels:
             info = labels[name]
+            if not info['num'] and not info['title']:
+                return f'<a class="fullref" href="#{name}">&#x2192;</a>'
             title_span = f'<span class="fullref-title">{info["title"].replace(" ", "&nbsp;")}</span>'
             if info['num']:
                 display = f'{info["num"]}&nbsp;{title_span}'
@@ -57,8 +81,5 @@ def process_refs(text: str) -> str:
     text = re.sub(r'\\ref\*?\{([^}]+)\}',     lambda m: _ref_link(m.group(1)),     text)
     text = re.sub(r'\\pageref\*?\{([^}]+)\}', lambda m: _ref_link(m.group(1)),     text)
     text = re.sub(r'\\fullref\{([^}]+)\}',    lambda m: _fullref_link(m.group(1)), text)
-
-    # Remove any \label{} not already consumed by convert_headings
-    text = re.sub(r'\\label\{[^}]+\}', '', text)
 
     return text

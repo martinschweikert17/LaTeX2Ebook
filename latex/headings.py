@@ -102,11 +102,14 @@ def _build_number(level: str, counters: dict, styles: dict) -> str:
     return '.'.join(parts)
 
 
+# \paragraph and \minisec are inline mini-headings: no counter, no TOC, but label support.
+_MINISEC_LEVELS = frozenset({'paragraph', 'minisec'})
+
 # Matches \appendix or heading commands (\part, \chapter* etc.)
 _HEADING_CMD = re.compile(
     r'\\appendix\b'
     r'|'
-    r'\\(?P<notoc>notoc)?(?P<level>part|chapter|section|subsection|subsubsection)(?P<starred>\*)?'
+    r'\\(?P<notoc>notoc)?(?P<level>part|chapter|section|subsection|subsubsection|paragraph|minisec)(?P<starred>\*)?'
     r'\s*(?:\[[^\]]*\])?\s*\{'
 )
 
@@ -183,7 +186,7 @@ def convert_headings(text: str) -> str:
             j += 1
         title = text[m.end():j - 1]
 
-        tag = _HTML_TAG[level]
+        tag = _HTML_TAG.get(level, 'p')
 
         # Consume optional \label{name} immediately after the closing }
         lm         = _LABEL_AFTER.match(text, j)
@@ -198,7 +201,12 @@ def convert_headings(text: str) -> str:
             hid = f'toc-{auto_id}'
         id_attr = f' id="{hid}"'
 
-        if starred or notoc:
+        if level in _MINISEC_LEVELS:
+            # \paragraph / \minisec: styled paragraph, no counter, no TOC entry
+            num = ''
+            out.append(f'<p class="minisec"{id_attr}>{title}</p>')
+        elif starred or notoc:
+            num = ''
             out.append(f'<{tag}{id_attr}>{title}</{tag}>')
             if not notoc:
                 _toc_entries.append({'level': level, 'num': '', 'title': title, 'id': hid})
@@ -217,8 +225,8 @@ def convert_headings(text: str) -> str:
 
             _toc_entries.append({'level': level, 'num': num, 'title': title, 'id': hid})
 
-            if label_name:
-                _label_map[label_name] = {'num': num, 'title': title, 'tag': tag}
+        if label_name:
+            _label_map[label_name] = {'num': num, 'title': title, 'tag': tag}
 
         i = j
 
