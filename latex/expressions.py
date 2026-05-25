@@ -28,9 +28,98 @@ from config import Config, PROGRAM_NAME
 from latex.bible_names import load_bible_names
 from latex.cjhebrew import convert_cjhebrew
 from latex.formatting import _eliminate_cmd, _replace_cmd
+from latex.newcommands import get_fm_value
 
 _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.expressions")
 _BIBLE_NAMES: dict[str, str] | None = None
+
+_HTML_FM = re.compile(
+    r'^%%%L2E_HTML_FRONTMATTER_BEGIN[^\n]*\n(.*?)^%%%L2E_HTML_FRONTMATTER_END[^\n]*\n?',
+    re.MULTILINE | re.DOTALL,
+)
+_EPUB_FM = re.compile(
+    r'^%%%L2E_EPUB_FRONTMATTER_BEGIN[^\n]*\n(.*?)^%%%L2E_EPUB_FRONTMATTER_END[^\n]*\n?',
+    re.MULTILINE | re.DOTALL,
+)
+_FM_BARE = re.compile(r'\\(fm\w+)(?![A-Za-z])')
+
+_SFFAM_SIZE  = r'(?:\\(?:tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge)\b\s*)*'
+_SFFAM_STYLE = r'(?:\\(?:textbf|bfseries|textit|itshape)\b\s*)*'
+_SFFAM_FM_LINE = re.compile(
+    r'\{' + _SFFAM_SIZE + _SFFAM_STYLE + _SFFAM_SIZE + r'\\(fm\w+)\s*\}'
+    r'(?:\\\\(?:\[[^\]]*\])?|\s*\\par\b)?',
+    re.DOTALL,
+)
+_SFFAM_FLUSHRIGHT = re.compile(
+    r'\\begin\{flushright\}(.*?)\\end\{flushright\}',
+    re.DOTALL,
+)
+
+
+def _build_sffamily_html(block: str) -> str:
+    """Convert \\sffamily...\\rmfamily block content to semantic HTML.
+
+    Each {<size>* <style>* \\fmXXX} group becomes <p class="fmXXX">value</p>.
+    A \\begin{flushright}...\\end{flushright} wrapper becomes <div class="flushright">.
+    Everything else (\\vfill, \\vspace, \\pagestyle, comments, …) is discarded.
+    """
+    import sys
+    print(f'DEBUG _build_sffamily_html called, block[:300]={repr(block[:300])}', file=sys.stderr, flush=True)
+
+    def _fm_items(content: str) -> list[str]:
+        content = re.sub(r'%[^\n]*', '', content)
+        parts = []
+        for m in _SFFAM_FM_LINE.finditer(content):
+            val = expand_fm_for_html(m.group(1))
+            if val:
+                parts.append(f'<p class="{m.group(1)}">{val}</p>')
+        return parts
+
+    fr = _SFFAM_FLUSHRIGHT.search(block)
+    if fr:
+        rows = _fm_items(block[:fr.start()])
+        inner = _fm_items(fr.group(1))
+        rows_after = _fm_items(block[fr.end():])
+        if inner:
+            rows.append('<div class="flushright">')
+            rows.extend(inner)
+            rows.append('</div>')
+        rows.extend(rows_after)
+    else:
+        rows = _fm_items(block)
+
+    return ('\n'.join(rows) + '\n') if rows else ''
+
+
+def _build_html_frontmatter(block_content: str) -> str:
+    """Generate title-page HTML from the \\fm* commands found in the block."""
+    from config import Config
+    cfg = Config.get()
+
+    def _fm_value(key: str) -> str:
+        if key == 'fmyear':
+            return cfg.copyright_year or cfg.year
+        return get_fm_value(key)
+
+    parts = []
+    for para in re.split(r'\n[ \t]*\n', block_content):
+        para = para.strip()
+        if not para:
+            continue
+        m = _FM_BARE.fullmatch(para)
+        if m:
+            key = m.group(1)
+            val = _fm_value(key)
+            if val:
+                if key == 'fmcopyright':
+                    parts.append('<hr class="fmrule"/>')
+                parts.append(f'<p class="{key}">{val}</p>')
+        else:
+            # inline \fm* within other text
+            para = _FM_BARE.sub(lambda n: _fm_value(n.group(1)) or n.group(0), para)
+            parts.append(f'<p>{para}</p>')
+    return '\n'.join(parts) + '\n' if parts else ''
+
 
 _NEWCMD_START = re.compile(
     r'\\(?:(?:new|renew)command\*?\s*\{(?:\\[A-Za-z]+)?\}|newcolumntype\s*\{[^}]*\})'
@@ -122,6 +211,36 @@ def convert_expressions(raw: str) -> str:
         result = _eliminate_cmd(result, cmd)
     result = _replace_cmd(result, r'\onlyforltoe', '', '')
 
+    # Target-specific frontmatter blocks
+    if cfg.htmlonly:
+        result = _HTML_FM.sub(lambda m: _build_html_frontmatter(m.group(1)), result)
+        result = _EPUB_FM.sub('', result)
+    else:
+        result = _HTML_FM.sub('', result)
+        result = _EPUB_FM.sub(lambda m: m.group(1), result)
+
+    # \sffamily...\rmfamily → semantic HTML before \fmXXX expansion so fm keys are still present
+    import sys as _sys
+    _sf_count = result.count('\\sffamily')
+    _rm_count = result.count('\\rmfamily')
+    print(f'DEBUG sffamily: {_sf_count} sffamily, {_rm_count} rmfamily', file=_sys.stderr, flush=True)
+    if _sf_count:
+        idx = result.find('\\sffamily')
+        print(f'DEBUG sffamily context: {repr(result[max(0,idx-5):idx+20])}', file=_sys.stderr, flush=True)
+    result = re.sub(
+        r'\\sffamily\b(.*?)\\rmfamily\b',
+        lambda m: f'<div class="sffamily">\n{_build_sffamily_html(m.group(1))}</div>',
+        result, flags=re.DOTALL,
+    )
+    result = result.replace(r'\sffamily', '').replace(r'\rmfamily', '')
+
+    # Expand remaining \fmXXX in body text using the full resolver (handles \fmyear → config year)
+    _resolve_bare = _fm_resolver()
+    result = _FM_BARE.sub(lambda m: _resolve_bare(m.group(1)) or m.group(0), result)
+
+    # \the\year → current year (fallback if \fmyear was not used)
+    result = re.sub(r'\\the\\year\b', cfg.copyright_year or cfg.year, result)
+
     # Bible translation names
     result = _replace_cmd(result, r'\biblename', '', '')
     result = re.sub(
@@ -154,6 +273,7 @@ def convert_expressions(raw: str) -> str:
         r'\begin{center}',
         r'\end{center}',
         r'\phantomsection',
+        r'\par',
     )
     for expr in _DELETE:
         result = result.replace(expr, '')
@@ -171,7 +291,7 @@ def convert_expressions(raw: str) -> str:
     result = _replace_cmd(result, r'\num', '', '')
 
     # \url{U} – clickable link
-    result = re.sub(r'\\url\{([^}]*)\}', r'<a href="\1">\1</a>', result)
+    result = re.sub(r'\\url\{([^}]*)\}', r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>', result)
 
 
     if cfg.debug:
@@ -183,7 +303,58 @@ def convert_expressions(raw: str) -> str:
 
 
 _BLANK_LINES = re.compile(r'\n[ \t]*\n+')
-_BLOCK_OPEN  = re.compile(r'^<(?:table|div|ul|ol|dl|blockquote|pre|figure|h[1-6]|p)\b', re.IGNORECASE)
+_BLOCK_OPEN  = re.compile(r'^</?(?:table|div|ul|ol|dl|blockquote|pre|figure|h[1-6]|p|nav|footer|thead|tbody|tfoot|tr)\b', re.IGNORECASE)
+
+_FM_BRACED = re.compile(r'\{\\(fm\w+)\}')
+
+_FM_BASIC_SUBS = (
+    (r'\copyright', '©'),
+    ('---',         '—'),
+    ('--',          '–'),
+    (r'\ldots',     '…'),
+    (r'\,',         ' '),
+    (r'\thinspace', ' '),
+    ('~',           ' '),
+)
+
+
+def _fm_resolver():
+    """Return a resolver function that maps fm key → processed value."""
+    from config import Config
+    cfg = Config.get()
+
+    def resolve(k: str) -> str:
+        if k == 'fmyear':
+            return cfg.copyright_year or cfg.year
+        return get_fm_value(k)
+
+    return resolve
+
+
+def expand_fm_text(text: str) -> str:
+    """Process arbitrary text for HTML: expand \\fmXXX refs and apply basic LaTeX substitutions."""
+    if not text:
+        return ''
+    resolve = _fm_resolver()
+    text = _FM_BRACED.sub(lambda m: resolve(m.group(1)) or m.group(0), text)
+    # Iterate until stable: an expanded value may itself contain \fmXXX refs
+    # (e.g. \fmcopyright expands to a body that contains \fmyear).
+    for _ in range(10):
+        expanded = _FM_BARE.sub(lambda m: resolve(m.group(1)) or m.group(0), text)
+        if expanded == text:
+            break
+        text = expanded
+    for old, new in _FM_BASIC_SUBS:
+        text = text.replace(old, new)
+    text = re.sub(r'\\[A-Za-z]+\{([^{}]*)\}', r'\1', text)
+    text = re.sub(r'\\[A-Za-z]+', '', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def expand_fm_for_html(key: str) -> str:
+    """Return a processed fm value ready for direct HTML insertion."""
+    value = _fm_resolver()(key)
+    return expand_fm_text(value)
 
 
 def build_paragraphs(text: str) -> str:

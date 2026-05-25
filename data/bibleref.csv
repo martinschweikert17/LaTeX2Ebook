@@ -73,6 +73,9 @@ IIM,LthK,2 Makk,2. Makkabäer
 Ws,LthK,Weish,Weisheit
 Si,LthK,Sir,Jesus Sirach
 Ba,LthK,Bar,Baruch
+Bez,LThk,Bez,Beza
+Jom,LThk,Jom,Joma
+Schab,LThK,Schab,Schabbat
 Gn,Lutherbibel,1.Mose,1. Mose
 Ex,Lutherbibel,2.Mose,2. Mose
 Lv,Lutherbibel,3.Mose,3. Mose
@@ -148,6 +151,9 @@ IIM,Lutherbibel,2.Makk,2. Makkabäer
 Ws,Lutherbibel,Weish,Weisheit
 Si,Lutherbibel,Sir,Sirach
 Ba,Lutherbibel,Bar,Baruch
+Bez,Lutherbibel,Bez,Beza
+Jom,Lutherbibel,Jom,Joma
+Schab,Lutherbibel,Schab,Schabbat
 Gn,Einheitsuebersetzung,Gen,Genesis
 Ex,Einheitsuebersetzung,Ex,Exodus
 Lv,Einheitsuebersetzung,Lev,Levitikus
@@ -223,6 +229,9 @@ IIM,Einheitsuebersetzung,2 Makk,2. Makkabäer
 Ws,Einheitsuebersetzung,Weish,Weisheit
 Si,Einheitsuebersetzung,Sir,Jesus Sirach
 Ba,Einheitsuebersetzung,Bar,Baruch
+Bez,Einheitsuebersetzung,Bez,Beza
+Jom,Einheitsuebersetzung,Jom,Joma
+Schab,Einheitsuebersetzung,Schab,Schabbat
 Gn,jerusalem,Gn,Gn
 Ex,jerusalem,Ex,Ex
 Lv,jerusalem,Lv,Lv
@@ -298,3 +307,6 @@ IIM,jerusalem,2M,2M
 Ws,jerusalem,Ws,Ws
 Si,jerusalem,Si,Si
 Ba,jerusalem,Ba,Ba
+Bez,jerusalem,Bet,Betzah
+Jom,jerusalem,Yom,Yoma
+Schab,jerusalem,Shabb,Shabbath

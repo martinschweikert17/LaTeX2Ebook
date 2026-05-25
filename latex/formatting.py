@@ -609,6 +609,14 @@ def apply_formatting(text: str) -> str:
     text = _QUOTE.sub(          lambda m: f'<p class="quotation">{m.group(1)}</p>', text)
 
     text = _eliminate_cmd(text, r'\needspace')
+
+    # Declaration-form font groups: {\SIZE* \textbf text} / {\SIZE* \textit text} / {\SIZE+ text}
+    _sz = r'(?:\\(?:tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge)\b\s*)*'
+    text = re.sub(r'\{' + _sz + r'\\(?:textbf|bfseries)\s+(.*?)\}',  r'<strong>\1</strong>', text, flags=re.DOTALL)
+    text = re.sub(r'\{' + _sz + r'\\(?:textit|itshape)\s+(.*?)\}',   r'<i>\1</i>',           text, flags=re.DOTALL)
+    text = re.sub(r'\{(?:\\(?:tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge)\b\s+)(.*?)\}',
+                  r'\1', text, flags=re.DOTALL)
+
     text = _replace_cmd(text, r'\centerline', '<p class="centerline">', '</p>')
     text = _replace_cmd(text, r'\textbf', '<strong>', '</strong>')
     text = _replace_cmd(text, r'\textit', '<i>', '</i>')
@@ -621,7 +629,7 @@ def apply_formatting(text: str) -> str:
     text = _replace_cmd_fn(text, r'\shortstack', lambda s: s.replace('\\\\', '<br/>'))
     text = _TABULAR.sub(  lambda m: _tabular_to_html(m.group(1), m.group(2)), text)
     text = _XLTABULAR.sub(lambda m: _xltabular_to_html(m.group('body'), m.group('colspec')), text)
-    text = text.replace('\\\\', '<br/>')
+    text = re.sub(r'\\\\(?:\[[^\]]*\])?', '<br/>', text)
 
     for item, uni in _COMPILED_SPECIALS:
         if isinstance(item, str):

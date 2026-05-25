@@ -34,6 +34,7 @@ import re
 import logging
 
 from config import Config, PROGRAM_NAME
+from latex.bib import CITETITLE_RE as _CITETITLE_RE, _short_title, get_bib
 from latex.formatting import convert_quotehebrew
 from latex.headings import get_label_map
 
@@ -109,9 +110,10 @@ def _scan_footnotes(text: str, htmlonly: bool) -> tuple[str, list[tuple[str, str
                               'href': f'#fn-{fn_num}'}
 
         if htmlonly:
+            tip = _tooltip_text(body)
             out.append(
                 f'<a id="fnref-{fn_num}" href="#fn-{fn_num}"'
-                f' class="footnote-ref">[{fn_num}]</a>'
+                f' class="footnote-ref" data-fn="{tip}">[{fn_num}]</a>'
             )
         else:
             # Inline: split body on blank lines so build_paragraphs cannot
@@ -136,6 +138,30 @@ def _scan_footnotes(text: str, htmlonly: bool) -> tuple[str, list[tuple[str, str
 
 
 _PARA_SPLIT = re.compile(r'\n[ \t]*\n+')
+
+_LATEX_CMD_ARG = re.compile(r'\\[A-Za-z]+\{([^{}]*)\}')
+_LATEX_CMD     = re.compile(r'\\[A-Za-z@]+')
+_LATEX_SPECIAL = re.compile(r'\\[^A-Za-z\s]')
+_HTML_TAG      = re.compile(r'<[^>]+>')
+
+
+def _tooltip_text(body: str) -> str:
+    """Strip LaTeX/HTML markup from a footnote body for use in data-fn attribute."""
+    text = _HTML_TAG.sub('', body)
+    # Resolve \citetitle{key} → short title before generic LaTeX stripping
+    bib = get_bib()
+    text = _CITETITLE_RE.sub(
+        lambda m: _short_title(bib[m.group(2)]) if m.group(2) in bib else m.group(2),
+        text,
+    )
+    prev = None
+    while prev != text:
+        prev = text
+        text = _LATEX_CMD_ARG.sub(r'\1', text)
+    text = _LATEX_CMD.sub('', text)
+    text = _LATEX_SPECIAL.sub('', text)
+    text = ' '.join(text.split())
+    return text.replace('&', '&amp;').replace('"', '&quot;')
 
 
 def _footnotes_html(footnotes: list[tuple[str, str]]) -> str:

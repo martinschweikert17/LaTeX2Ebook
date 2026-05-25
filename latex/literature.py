@@ -22,9 +22,15 @@ Pipeline position
 
 import re
 import logging
-from pathlib import Path
 
 from config import Config, PROGRAM_NAME
+from latex.bib import (
+    CITETITLE_RE as _CITETITLE,
+    _latex_to_text,
+    _load_bib,
+    _short_title,
+    get_bib,
+)
 
 _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.literature")
 
@@ -35,141 +41,6 @@ _LIT_SECTION = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 _LIT_PLACEHOLDER = '%%%L2E_LITERATURE'
-_CITETITLE       = re.compile(r'\\citetitle(?:\[([^\]]*)\])?\{([^}]+)\}')
-
-# ── BibTeX parser ──────────────────────────────────────────────────────────────
-
-_ENTRY_RE = re.compile(r'@(\w+)\{(\w+)\s*,', re.IGNORECASE)
-
-
-def _load_bib(bib_path: str | Path) -> dict[str, dict]:
-    """Parse a BibTeX file; return {key: fields_dict}."""
-    path = Path(bib_path).expanduser()
-    if not path.exists():
-        _logger.warning("Bib file not found: %s", path)
-        return {}
-
-    text = path.read_text(encoding='utf-8', errors='replace')
-    entries: dict[str, dict] = {}
-    i = 0
-    n = len(text)
-
-    while i < n:
-        m = _ENTRY_RE.search(text, i)
-        if not m:
-            break
-
-        entry_type = m.group(1).lower()
-        key        = m.group(2)
-        j          = m.end()          # depth=1: we consumed the opening '{'
-
-        depth = 1
-        while j < n and depth > 0:
-            c = text[j]
-            if   c == '{': depth += 1
-            elif c == '}': depth -= 1
-            j += 1
-
-        body            = text[m.end():j - 1]
-        fields          = _parse_fields(body)
-        fields['_type'] = entry_type
-        fields['_key']  = key
-        entries[key]    = fields
-        i = j
-
-    return entries
-
-
-def _parse_fields(body: str) -> dict[str, str]:
-    """Parse BibTeX field assignments from an entry body."""
-    fields: dict[str, str] = {}
-    i = 0
-    n = len(body)
-
-    while i < n:
-        # Skip whitespace and commas between fields
-        while i < n and body[i] in ' \t\n\r,':
-            i += 1
-        if i >= n:
-            break
-
-        eq = body.find('=', i)
-        if eq < 0:
-            break
-
-        name = body[i:eq].strip().lower()
-        if not re.match(r'^[a-zA-Z_]\w*$', name):
-            i = eq + 1
-            continue
-
-        i = eq + 1
-        while i < n and body[i] in ' \t\n\r':
-            i += 1
-        if i >= n:
-            break
-
-        if body[i] == '{':
-            depth = 1
-            j = i + 1
-            while j < n and depth > 0:
-                if   body[j] == '{': depth += 1
-                elif body[j] == '}': depth -= 1
-                j += 1
-            fields[name] = body[i + 1:j - 1]
-            i = j
-        elif body[i] == '"':
-            j = i + 1
-            while j < n and body[j] != '"':
-                if body[j] == '\\':
-                    j += 1
-                j += 1
-            fields[name] = body[i + 1:j]
-            i = j + 1
-        else:
-            j = i
-            while j < n and body[j] not in ',}':
-                j += 1
-            fields[name] = body[i:j].strip()
-            i = j
-
-    return fields
-
-
-# ── LaTeX → plain text ────────────────────────────────────────────────────────
-
-_LATEX_CHARS = [
-    (r'\"a', 'ä'), (r'\"o', 'ö'), (r'\"u', 'ü'),
-    (r'\"A', 'Ä'), (r'\"O', 'Ö'), (r'\"U', 'Ü'),
-    (r'\"e', 'ë'), (r'\"E', 'Ë'),
-    (r"\'e", 'é'), (r"\'a", 'á'), (r"\'o", 'ó'), (r"\'u", 'ú'), (r"\'i", 'í'),
-    (r'\`e', 'è'), (r'\`a', 'à'), (r'\`o', 'ò'),
-    (r'\^a', 'â'), (r'\^e', 'ê'), (r'\^o', 'ô'), (r'\^u', 'û'),
-    (r'\~n', 'ñ'), (r'\~a', 'ã'), (r'\~o', 'õ'),
-    (r'{\ss}', 'ß'), (r'\ss', 'ß'),
-    (r'{\ae}', 'æ'), (r'\ae', 'æ'),
-    (r'{\AA}', 'Å'), (r'\AA', 'Å'),
-    (r'{[}', '['),  (r'{]}', ']'),
-    (r'\&', '&'),
-    (r'\-', ''),
-    ('~', ' '),
-]
-
-
-def _latex_to_text(s: str) -> str:
-    if not s:
-        return ''
-    s = re.sub(r'\\enquote\{([^{}]*)\}', r'"\1"', s)
-    for latex, uni in _LATEX_CHARS:
-        s = s.replace(latex, uni)
-    # Strip {…} braces iteratively (handles nesting)
-    for _ in range(5):
-        s2 = re.sub(r'\{([^{}]*)\}', r'\1', s)
-        if s2 == s:
-            break
-        s = s2
-    # Remove remaining backslash commands
-    s = re.sub(r'\\[a-zA-Z]+\s*', '', s)
-    return s.strip()
 
 
 # ── Name handling ──────────────────────────────────────────────────────────────
@@ -236,11 +107,6 @@ def _sort_key(entry: dict) -> str:
 
 # ── Edition normalisation ──────────────────────────────────────────────────────
 
-def _short_title(entry: dict) -> str:
-    """Return shorttitle if present, otherwise title."""
-    return _latex_to_text(entry.get('shorttitle', '') or entry.get('title', ''))
-
-
 def _first_author_lastname(entry: dict) -> str:
     """Return the last name of the first author or editor."""
     field = entry.get('author', '') or entry.get('editor', '')
@@ -267,7 +133,7 @@ def _append_url(content: str, url: str, urldate: str) -> str:
         return content
     href    = url.replace('&', '&amp;')
     display = url.replace('&', '&amp;')
-    link    = f'<a href="{href}">{display}</a>'
+    link    = f'<a href="{href}" target="_blank" rel="noopener noreferrer">{display}</a>'
     sep     = ' ' if re.search(r'[\d.!?)]$', content) else '. '
     result  = content + sep + link
     if urldate:
@@ -410,12 +276,11 @@ def _format_entry(key: str, entry: dict) -> str:
 
 def process_literature(text: str) -> str:
     """Replace \\citetitle{} commands and build the literature section."""
-    cfg      = Config.get()
-    bib_path = cfg.bib_file
-    bib      = _load_bib(bib_path) if bib_path else {}
+    cfg = Config.get()
+    bib = get_bib()
 
-    if not bib and bib_path:
-        _logger.warning("No bib entries loaded from: %s", bib_path)
+    if not bib and cfg.bib_file:
+        _logger.warning("No bib entries loaded from: %s", cfg.bib_file)
 
     cited_keys: list[str] = []
     seen:       set[str]  = set()

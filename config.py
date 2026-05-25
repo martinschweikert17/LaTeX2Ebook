@@ -170,6 +170,7 @@ class Config:
             "subtitle":        "",
             "title":           "",
             "year":            str(date.today().year),
+            "copyright_year":  "",
             "greekfontsize":   "1.05em",
             "hebrewfontsize":  "1.2em",
             "htmlonly":         False,
@@ -220,6 +221,7 @@ class Config:
             ("EBOOK", "VerseEmphasis"): ("verseemphasis", str),
             ("EBOOK", "GreekFontSize"):  ("greekfontsize",  str),
             ("EBOOK", "HebrewFontSize"): ("hebrewfontsize", str),
+            ("GENERAL", "CopyrightYear"): ("copyright_year", str),
             ("GENERAL", "Debug"): ("debug", bool),
             ("GENERAL", "HtmlOnly"): ("htmlonly", bool),
             ("GENERAL", "Language"): ("language", str),
@@ -442,7 +444,11 @@ class Config:
 
     @property
     def year(self) -> str:
-        return self._data["year"]
+        return self._data["year"] or str(date.today().year)
+
+    @property
+    def copyright_year(self) -> str:
+        return self._data["copyright_year"]
 
     @property
     def szmode(self) -> str:

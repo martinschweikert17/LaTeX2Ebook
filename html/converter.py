@@ -41,6 +41,8 @@ import re
 from pathlib import Path
 
 from config import Config
+from latex.expressions import expand_fm_for_html, expand_fm_text
+from latex.newcommands import get_fm_value, get_meta_value
 
 # Tags whose opening tag alone (without closing tag on same line) widens the indent.
 _PRETTY_OPEN  = re.compile(
@@ -130,10 +132,10 @@ class HtmlConverter:
     def _build_page(self, raw: str, lang: str) -> str:
         cfg  = Config.get()
         viewport_meta    = '<meta name="viewport" content="width=device-width, initial-scale=1.0" />' if cfg.htmlonly else ""
-        meta_description = (f'<meta name="description" content="{cfg.description}" />'
-                            if cfg.description else "")
-        meta_keywords    = (f'<meta name="keywords" content="{cfg.keywords}" />'
-                            if cfg.keywords else "")
+        _desc            = get_meta_value('metadescription') or cfg.description
+        _kw              = get_meta_value('metakeywords')    or cfg.keywords
+        meta_description = f'<meta name="description" content="{_desc}" />' if _desc else ""
+        meta_keywords    = f'<meta name="keywords" content="{_kw}" />'      if _kw   else ""
         reset_css           = "* { box-sizing: border-box; margin: 0; padding: 0; }" if cfg.htmlonly else ""
         body_layout_css     = "max-width: 50em;\n      margin: 2em auto;"            if cfg.htmlonly else ""
         body_background_css = "background-color: #fafafa;"                           if cfg.htmlonly else ""
@@ -141,21 +143,56 @@ class HtmlConverter:
         a_hover_css         = "a:hover { color: #005faf; }"                          if cfg.htmlonly else ""
         img_boxshadow_css   = "box-shadow: 0 2px 6px rgba(0,0,0,.3);"               if cfg.htmlonly else ""
         dropcap_css         = ".drop-cap::first-letter { text-shadow: 1px 1px 2px #888; }" if cfg.htmlonly else ""
-        ebook_title    = f'<p class="ebook-title">{cfg.title}</p>'       if cfg.htmlonly and cfg.title    else ""
-        ebook_subtitle = f'<p class="ebook-subtitle">{cfg.subtitle}</p>' if cfg.htmlonly and cfg.subtitle else ""
-        ebook_author   = f'<p class="ebook-author">{cfg.author}</p>'     if cfg.htmlonly and cfg.author   else ""
-        copyright_text  = f"© {cfg.year} by {cfg.author}"
-        copyright_block = (
-            f'<hr class="ebook-copyright-rule" />\n'
-            f'<p class="ebook-copyright">{copyright_text}</p>'
-            if cfg.htmlonly else ""
-        )
+        tooltip_css         = (
+            "a.footnote-ref { position: relative; }\n"
+            "    a.footnote-ref::after {\n"
+            "      content: attr(data-fn);\n"
+            "      position: absolute;\n"
+            "      bottom: 1.4rem;\n"
+            "      left: 0;\n"
+            "      background: #333;\n"
+            "      color: #fff;\n"
+            "      padding: 0.5rem 0.7rem;\n"
+            "      border-radius: 4px;\n"
+            "      white-space: normal;\n"
+            "      width: 320px;\n"
+            "      display: none;\n"
+            "      font-size: 0.85rem;\n"
+            "      font-weight: normal;\n"
+            "      line-height: 1.4;\n"
+            "      vertical-align: baseline;\n"
+            "      z-index: 100;\n"
+            "    }\n"
+            "    a.footnote-ref:hover::after { display: block; }"
+        ) if cfg.htmlonly else ""
+        fmtitlecss         = get_fm_value('fmtitlecss')         or "font-family: sans-serif; font-size: 1.8em; font-weight: bold; text-align: center; margin-top: 1em; margin-bottom: 0.3em;"
+        fmsubtitlecss      = get_fm_value('fmsubtitlecss')      or "font-family: sans-serif; font-size: 1.3em; font-style: italic; text-align: center; margin-top: 0; margin-bottom: 0.8em;"
+        fmauthorcss        = get_fm_value('fmauthorcss')        or "font-family: sans-serif; font-size: 1.1em; text-align: center; margin-bottom: 0.3em;"
+        fmyearcss          = get_fm_value('fmyearcss')          or "font-family: sans-serif; font-size: 1.0em; text-align: center; color: #555; margin-bottom: 2em;"
+        fmcopyrightrulecss = get_fm_value('fmcopyrightrulecss') or "border: none; border-top: 1px solid #aaa; margin-top: 2em; margin-bottom: 0.5em;"
+        fmcopyrightcss     = get_fm_value('fmcopyrightcss')     or "font-size: 0.85em; color: #555; text-align: left; margin-top: 0;"
         fullreftitle_css    = cfg.fullref_title
         longversionname_css = cfg.longversionname
         transliteration_css = cfg.transliteration
         verseemphasis_css   = cfg.verse_emphasis
         personname_css      = cfg.person_name_format
         smallcaps_css       = cfg.small_caps_format
+
+        fmfooter_raw = get_fm_value('fmfooter') if cfg.htmlonly else ''
+        if fmfooter_raw:
+            footer_parts = ['<footer>', '<hr class="footer-rule"/>']
+            for item in fmfooter_raw.split('\\\\'):
+                item = item.strip()
+                if not item:
+                    continue
+                m = re.fullmatch(r'\\(fm\w+)', item)
+                val = expand_fm_for_html(m.group(1)) if m else expand_fm_text(item)
+                if val:
+                    footer_parts.append(f'<p class="footer-text">{val}</p>')
+            footer_parts.append('</footer>')
+            footer = '\n'.join(footer_parts)
+        else:
+            footer = ''
 
         template = _TEMPLATE.read_text(encoding="utf-8")
         return (template
@@ -171,12 +208,14 @@ class HtmlConverter:
                 .replace("{dropcap_css}",         dropcap_css)
                 .replace("{programname}",         cfg.programname)
                 .replace("{lang}",                lang)
-                .replace("{title}",               cfg.title)
-                .replace("{author}",              cfg.author)
-                .replace("{ebook_title}",         ebook_title)
-                .replace("{ebook_subtitle}",      ebook_subtitle)
-                .replace("{ebook_author}",        ebook_author)
-                .replace("{copyright_block}",     copyright_block)
+                .replace("{title}",               get_fm_value('fmtitle')  or cfg.title)
+                .replace("{author}",              get_fm_value('fmauthor') or cfg.author)
+                .replace("{fmtitlecss}",          fmtitlecss)
+                .replace("{fmsubtitlecss}",       fmsubtitlecss)
+                .replace("{fmauthorcss}",         fmauthorcss)
+                .replace("{fmyearcss}",           fmyearcss)
+                .replace("{fmcopyrightrulecss}",  fmcopyrightrulecss)
+                .replace("{fmcopyrightcss}",      fmcopyrightcss)
                 .replace("{fullreftitle_css}",    fullreftitle_css)
                 .replace("{longversionname_css}", longversionname_css)
                 .replace("{transliteration_css}", transliteration_css)
@@ -185,5 +224,7 @@ class HtmlConverter:
                 .replace("{smallcaps_css}",       smallcaps_css)
                 .replace("{greekfontsize}",       cfg.greek_font_size)
                 .replace("{hebrewfontsize}",      cfg.hebrew_font_size)
-                .replace("{body}",                raw))
+                .replace("{tooltip_css}",         tooltip_css)
+                .replace("{body}",                raw)
+                .replace("{footer}",             footer))
 
