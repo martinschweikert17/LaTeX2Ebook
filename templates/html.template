@@ -152,6 +152,26 @@
     a.fullref { display: inline-block; vertical-align: baseline; white-space: nowrap; }
     a.fullref span.fullref-title { {fullreftitle_css} }
     a.citetitle { font-style: italic; }
+    .latex {
+      font-family: "Times New Roman", Times, Georgia, serif;
+      font-size: 1.2em;
+      display: inline-block;
+      line-height: 1;
+    }
+    .latex span:nth-child(1) {
+      text-transform: uppercase;
+      font-size: 0.7em;
+      vertical-align: 0.35em;
+      margin-left: -0.36em;
+      margin-right: -0.15em;
+    }
+    .latex span:nth-child(2) {
+      text-transform: uppercase;
+      font-size: 1em;
+      vertical-align: -0.4em;
+      margin-left: -0.15em;
+      margin-right: -0.15em;
+    }
 
     /* ------------------------------------------------------------------ */
     /* Literature list                                                      */

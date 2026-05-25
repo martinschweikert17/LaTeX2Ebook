@@ -41,7 +41,7 @@ _EPUB_FM = re.compile(
     r'^%%%L2E_EPUB_FRONTMATTER_BEGIN[^\n]*\n(.*?)^%%%L2E_EPUB_FRONTMATTER_END[^\n]*\n?',
     re.MULTILINE | re.DOTALL,
 )
-_FM_BARE = re.compile(r'\\(fm\w+)(?![A-Za-z])')
+_FM_BARE = re.compile(r'\\(fm\w+)(?![A-Za-z])(?:\{\})?')
 
 _SFFAM_SIZE  = r'(?:\\(?:tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge)\b\s*)*'
 _SFFAM_STYLE = r'(?:\\(?:textbf|bfseries|textit|itshape)\b\s*)*'
@@ -63,9 +63,6 @@ def _build_sffamily_html(block: str) -> str:
     A \\begin{flushright}...\\end{flushright} wrapper becomes <div class="flushright">.
     Everything else (\\vfill, \\vspace, \\pagestyle, comments, …) is discarded.
     """
-    import sys
-    print(f'DEBUG _build_sffamily_html called, block[:300]={repr(block[:300])}', file=sys.stderr, flush=True)
-
     def _fm_items(content: str) -> list[str]:
         content = re.sub(r'%[^\n]*', '', content)
         parts = []
@@ -171,6 +168,7 @@ def convert_expressions(raw: str) -> str:
     """
     cfg = Config.get()
 
+
     # Eliminate \newcommand / \renewcommand definitions before any substitutions run
     # (substitutions would corrupt the command names inside the definitions)
     result = _eliminate_newcommand_defs(raw)
@@ -220,13 +218,6 @@ def convert_expressions(raw: str) -> str:
         result = _EPUB_FM.sub(lambda m: m.group(1), result)
 
     # \sffamily...\rmfamily → semantic HTML before \fmXXX expansion so fm keys are still present
-    import sys as _sys
-    _sf_count = result.count('\\sffamily')
-    _rm_count = result.count('\\rmfamily')
-    print(f'DEBUG sffamily: {_sf_count} sffamily, {_rm_count} rmfamily', file=_sys.stderr, flush=True)
-    if _sf_count:
-        idx = result.find('\\sffamily')
-        print(f'DEBUG sffamily context: {repr(result[max(0,idx-5):idx+20])}', file=_sys.stderr, flush=True)
     result = re.sub(
         r'\\sffamily\b(.*?)\\rmfamily\b',
         lambda m: f'<div class="sffamily">\n{_build_sffamily_html(m.group(1))}</div>',
@@ -234,9 +225,8 @@ def convert_expressions(raw: str) -> str:
     )
     result = result.replace(r'\sffamily', '').replace(r'\rmfamily', '')
 
-    # Expand remaining \fmXXX in body text using the full resolver (handles \fmyear → config year)
-    _resolve_bare = _fm_resolver()
-    result = _FM_BARE.sub(lambda m: _resolve_bare(m.group(1)) or m.group(0), result)
+    # Expand remaining \fmXXX in body text — full expansion including nested refs and LaTeX subs
+    result = _FM_BARE.sub(lambda m: expand_fm_for_html(m.group(1)) or m.group(0), result)
 
     # \the\year → current year (fallback if \fmyear was not used)
     result = re.sub(r'\\the\\year\b', cfg.copyright_year or cfg.year, result)
@@ -273,11 +263,12 @@ def convert_expressions(raw: str) -> str:
         r'\begin{center}',
         r'\end{center}',
         r'\phantomsection',
-        r'\par',
     )
     for expr in _DELETE:
         result = result.replace(expr, '')
+    result = re.sub(r'\\par\b', '', result)
 
+    result = re.sub(r'\\begin\{addmargin\}(?:\[[^\]]*\])?\{[^}]*\}', '', result)
     result = re.sub(r'\\usepackage(?:\[[^\]]*\])?\{[^}]*\}', '', result)
     result = re.sub(r'\\input\{[^}]*\}', '', result)
     result = re.sub(r'\\addcontentsline\{[^}]*\}\{[^}]*\}\{[^}]*\}', '', result)
@@ -289,6 +280,9 @@ def convert_expressions(raw: str) -> str:
 
     # \num{N} – HTML has no equivalent; output the number as-is
     result = _replace_cmd(result, r'\num', '', '')
+
+    # \LaTeX logo
+    result = re.sub(r'\\LaTeX(?:\{\})?', _LATEX_LOGO, result)
 
     # \url{U} – clickable link
     result = re.sub(r'\\url\{([^}]*)\}', r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>', result)
@@ -307,8 +301,12 @@ _BLOCK_OPEN  = re.compile(r'^</?(?:table|div|ul|ol|dl|blockquote|pre|figure|h[1-
 
 _FM_BRACED = re.compile(r'\{\\(fm\w+)\}')
 
+_LATEX_LOGO = '<span class="latex">L<span>a</span>T<span>e</span>X</span>'
+
 _FM_BASIC_SUBS = (
     (r'\copyright', '©'),
+    (r'\LaTeX{}',   _LATEX_LOGO),
+    (r'\LaTeX',     _LATEX_LOGO),
     ('---',         '—'),
     ('--',          '–'),
     (r'\ldots',     '…'),
