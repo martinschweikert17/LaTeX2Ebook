@@ -13,7 +13,7 @@ Pipeline
 --------
   deflate  →  decomment  →  expand_newcommands  →  apply_personal_commands
   →  convert_bibleref  →  convert_expressions  →  apply_formatting
-  →  convert_headings  →  process_toc  →  process_footnotes  →  process_refs  →  process_literature
+  →  convert_headings  →  process_footnotes  →  process_toc  →  process_refs  →  process_literature
   →  build_paragraphs
   →  html/converter.py  →  ebook/builder.py
 
@@ -33,8 +33,31 @@ Usage
 """
 
 import logging
+import re
 
 from config import Config
+
+_INPUT_FRONTMATTER = re.compile(r'\\input\{frontmatter\}')
+
+
+def _inline_frontmatter(raw: str) -> str:
+    """Replace \\input{frontmatter} with the content of frontmatter_<target>.tex.
+
+    Runs before deflate() so that LANG blocks inside the frontmatter file
+    are processed by the normal deflate pipeline.
+    """
+    if not _INPUT_FRONTMATTER.search(raw):
+        return raw
+    from config import Config
+    cfg = Config.get()
+    fm_path = cfg.input_directory / f"frontmatter_{cfg.target.lower()}.tex"
+    if not fm_path.exists():
+        raise FileNotFoundError(
+            f"Frontmatter file not found: {fm_path}\n"
+            f"Expected: frontmatter_{cfg.target.lower()}.tex in {cfg.input_directory}"
+        )
+    content = fm_path.read_text(encoding="utf-8")
+    return _INPUT_FRONTMATTER.sub(lambda _: content, raw)
 from latex.bibleref import convert_bibleref
 from latex.decomment import decomment
 from latex.deflate import deflate
@@ -81,7 +104,8 @@ class LatexReader:
         if not path.exists():
             raise FileNotFoundError(f"LaTeX source file not found: {path}")
 
-        raw = deflate(path.read_text(encoding="utf-8"))
+        raw = _inline_frontmatter(path.read_text(encoding="utf-8"))
+        raw = deflate(raw)
         raw = decomment(raw)
         raw = expand_newcommands(raw)
         raw = apply_personal_commands(raw, build_jhwh_commands())
@@ -89,8 +113,8 @@ class LatexReader:
         raw = convert_expressions(raw)
         raw = apply_formatting(raw)
         raw = convert_headings(raw)
-        raw = process_toc(raw)
         raw = process_footnotes(raw)
+        raw = process_toc(raw)
         raw = process_refs(raw)
         raw = process_literature(raw)
         raw = build_paragraphs(raw)

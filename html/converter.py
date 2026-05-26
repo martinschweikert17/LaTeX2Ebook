@@ -133,7 +133,7 @@ class HtmlConverter:
         cfg  = Config.get()
         viewport_meta    = '<meta name="viewport" content="width=device-width, initial-scale=1.0" />' if cfg.htmlonly else ""
         _desc            = get_meta_value('metadescription') or cfg.description
-        _kw              = get_meta_value('metakeywords')    or cfg.keywords
+        _kw              = get_meta_value('metakeywords')    or get_fm_value('fmkeywords') or cfg.keywords
         meta_description = f'<meta name="description" content="{_desc}" />' if _desc else ""
         meta_keywords    = f'<meta name="keywords" content="{_kw}" />'      if _kw   else ""
         reset_css           = "* { box-sizing: border-box; margin: 0; padding: 0; }" if cfg.htmlonly else ""
@@ -169,8 +169,9 @@ class HtmlConverter:
         fmsubtitlecss      = get_fm_value('fmsubtitlecss')      or "font-family: sans-serif; font-size: 1.3em; font-style: italic; text-align: center; margin-top: 0; margin-bottom: 0.8em;"
         fmauthorcss        = get_fm_value('fmauthorcss')        or "font-family: sans-serif; font-size: 1.1em; text-align: center; margin-bottom: 0.3em;"
         fmyearcss          = get_fm_value('fmyearcss')          or "font-family: sans-serif; font-size: 1.0em; text-align: center; color: #555; margin-bottom: 2em;"
-        fmcopyrightrulecss = get_fm_value('fmcopyrightrulecss') or "border: none; border-top: 1px solid #aaa; margin-top: 2em; margin-bottom: 0.5em;"
-        fmcopyrightcss     = get_fm_value('fmcopyrightcss')     or "font-size: 0.85em; color: #555; text-align: left; margin-top: 0;"
+        fmcopyrightrulecss    = get_fm_value('fmcopyrightrulecss')    or "border: none; border-top: 1px solid #aaa; margin-top: 2em; margin-bottom: 0.5em;"
+        fmcopyrightcss        = get_fm_value('fmcopyrightcss')        or "font-size: 0.85em; color: #555; text-align: left; margin-top: 0;"
+        fmtableofcontentcss   = get_fm_value('fmtableofcontentcss')   or "font-family: sans-serif; font-size: 1.4em; font-weight: bold; line-height: 1.2; margin-top: 1.5em; margin-bottom: 0.5em;"
         fullreftitle_css    = cfg.fullref_title
         longversionname_css = cfg.longversionname
         transliteration_css = cfg.transliteration
@@ -215,8 +216,9 @@ class HtmlConverter:
                 .replace("{fmauthorcss}",         fmauthorcss)
                 .replace("{fmyearcss}",           fmyearcss)
                 .replace("{fmcopyrightrulecss}",  fmcopyrightrulecss)
-                .replace("{fmcopyrightcss}",      fmcopyrightcss)
-                .replace("{fullreftitle_css}",    fullreftitle_css)
+                .replace("{fmcopyrightcss}",        fmcopyrightcss)
+                .replace("{fmtableofcontentcss}",  fmtableofcontentcss)
+                .replace("{fullreftitle_css}",     fullreftitle_css)
                 .replace("{longversionname_css}", longversionname_css)
                 .replace("{transliteration_css}", transliteration_css)
                 .replace("{verseemphasis_css}",   verseemphasis_css)

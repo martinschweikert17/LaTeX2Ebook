@@ -63,8 +63,9 @@ def _epub_css(cfg: Config) -> str:
     fmsubtitlecss      = get_fm_value('fmsubtitlecss')      or "font-family: sans-serif; font-size: 1.3em; font-style: italic; text-align: center; margin-top: 0; margin-bottom: 0.8em;"
     fmauthorcss        = get_fm_value('fmauthorcss')        or "font-family: sans-serif; font-size: 1.1em; text-align: center; margin-bottom: 0.3em;"
     fmyearcss          = get_fm_value('fmyearcss')          or "font-family: sans-serif; font-size: 1.0em; text-align: center; color: #555; margin-bottom: 2em;"
-    fmcopyrightrulecss = get_fm_value('fmcopyrightrulecss') or "border: none; border-top: 1px solid #aaa; margin-top: 2em; margin-bottom: 0.5em;"
-    fmcopyrightcss     = get_fm_value('fmcopyrightcss')     or "font-size: 0.85em; color: #555; text-align: left; margin-top: 0;"
+    fmcopyrightrulecss  = get_fm_value('fmcopyrightrulecss')  or "border: none; border-top: 1px solid #aaa; margin-top: 2em; margin-bottom: 0.5em;"
+    fmcopyrightcss      = get_fm_value('fmcopyrightcss')      or "font-size: 0.85em; color: #555; text-align: left; margin-top: 0;"
+    fmtableofcontentcss = get_fm_value('fmtableofcontentcss') or "font-family: sans-serif; font-size: 1.4em; font-weight: bold; line-height: 1.2; margin-top: 1.5em; margin-bottom: 0.5em;"
     return (
         _CSS_TEMPLATE.read_text(encoding="utf-8")
         .replace("{fmtitlecss}",          fmtitlecss)
@@ -72,8 +73,9 @@ def _epub_css(cfg: Config) -> str:
         .replace("{fmauthorcss}",         fmauthorcss)
         .replace("{fmyearcss}",           fmyearcss)
         .replace("{fmcopyrightrulecss}",  fmcopyrightrulecss)
-        .replace("{fmcopyrightcss}",      fmcopyrightcss)
-        .replace("{fullreftitle_css}",    cfg.fullref_title)
+        .replace("{fmcopyrightcss}",        fmcopyrightcss)
+        .replace("{fmtableofcontentcss}",  fmtableofcontentcss)
+        .replace("{fullreftitle_css}",     cfg.fullref_title)
         .replace("{longversionname_css}", cfg.longversionname)
         .replace("{transliteration_css}", cfg.transliteration)
         .replace("{verseemphasis_css}",   cfg.verse_emphasis)
@@ -173,13 +175,15 @@ class EbookBuilder:
     # ------------------------------------------------------------------
 
     def _build_epub(self, html_path: Path, out_path: Path) -> None:
-        from latex.newcommands import get_fm_value
+        from latex.newcommands import get_fm_value, get_meta_value
 
         cfg = Config.get()
 
         body, lang = _parse_html(html_path)
-        title  = get_fm_value('fmtitle')  or cfg.title
-        author = get_fm_value('fmauthor') or cfg.author
+        title     = get_fm_value('fmtitle')     or cfg.title
+        author    = get_fm_value('fmauthor')    or cfg.author
+        keywords  = get_fm_value('fmkeywords')  or get_meta_value('metakeywords') or cfg.keywords
+        publisher = get_fm_value('fmpublisher') or 'Selbstverlag'
 
         # --- Book metadata ---
         book = epub.EpubBook()
@@ -187,10 +191,11 @@ class EbookBuilder:
         book.set_title(title)
         book.set_language(lang)
         book.add_author(author)
+        book.add_metadata('DC', 'publisher', publisher)
         if cfg.description:
             book.add_metadata('DC', 'description', cfg.description)
-        if cfg.keywords:
-            book.add_metadata('DC', 'subject', cfg.keywords)
+        if keywords:
+            book.add_metadata('DC', 'subject', keywords)
         cy = cfg.copyright_year or cfg.year
         if cy:
             book.add_metadata('DC', 'date', cy)
@@ -224,7 +229,10 @@ class EbookBuilder:
         book.add_item(epub.EpubNav())
 
         # --- Spine ---
-        book.spine = ["nav", chapter]
+        # "nav" is intentionally excluded: including it causes readers to start
+        # on the machine-readable TOC page instead of the title page.
+        # The NAV document remains in the manifest for EPUB3 compliance.
+        book.spine = [chapter]
 
         epub.write_epub(str(out_path), book)
         self._logger.debug("EPUB written: %s (%d TOC entries)", out_path, len(book.toc))

@@ -33,14 +33,6 @@ from latex.newcommands import get_fm_value
 _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.expressions")
 _BIBLE_NAMES: dict[str, str] | None = None
 
-_HTML_FM = re.compile(
-    r'^%%%L2E_HTML_FRONTMATTER_BEGIN[^\n]*\n(.*?)^%%%L2E_HTML_FRONTMATTER_END[^\n]*\n?',
-    re.MULTILINE | re.DOTALL,
-)
-_EPUB_FM = re.compile(
-    r'^%%%L2E_EPUB_FRONTMATTER_BEGIN[^\n]*\n(.*?)^%%%L2E_EPUB_FRONTMATTER_END[^\n]*\n?',
-    re.MULTILINE | re.DOTALL,
-)
 _FM_BARE = re.compile(r'\\(fm\w+)(?![A-Za-z])(?:\{\})?')
 
 _SFFAM_SIZE  = r'(?:\\(?:tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge)\b\s*)*'
@@ -88,35 +80,6 @@ def _build_sffamily_html(block: str) -> str:
     return ('\n'.join(rows) + '\n') if rows else ''
 
 
-def _build_html_frontmatter(block_content: str) -> str:
-    """Generate title-page HTML from the \\fm* commands found in the block."""
-    from config import Config
-    cfg = Config.get()
-
-    def _fm_value(key: str) -> str:
-        if key == 'fmyear':
-            return cfg.copyright_year or cfg.year
-        return get_fm_value(key)
-
-    parts = []
-    for para in re.split(r'\n[ \t]*\n', block_content):
-        para = para.strip()
-        if not para:
-            continue
-        m = _FM_BARE.fullmatch(para)
-        if m:
-            key = m.group(1)
-            val = _fm_value(key)
-            if val:
-                if key == 'fmcopyright':
-                    parts.append('<hr class="fmrule"/>')
-                parts.append(f'<p class="{key}">{val}</p>')
-        else:
-            # inline \fm* within other text
-            para = _FM_BARE.sub(lambda n: _fm_value(n.group(1)) or n.group(0), para)
-            parts.append(f'<p>{para}</p>')
-    return '\n'.join(parts) + '\n' if parts else ''
-
 
 _NEWCMD_START = re.compile(
     r'\\(?:(?:new|renew)command\*?\s*\{(?:\\[A-Za-z]+)?\}|newcolumntype\s*\{[^}]*\})'
@@ -152,6 +115,34 @@ def _bible_names() -> dict[str, str]:
     if _BIBLE_NAMES is None:
         _BIBLE_NAMES = load_bible_names()
     return _BIBLE_NAMES
+
+
+_FM_STANDALONE = re.compile(
+    r'^\{?'
+    r'(?:\\(?:tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge)\b\s*)*'
+    r'\\(fm\w+)(?![A-Za-z])(?:\{\})?\}?$'
+)
+
+
+def _expand_standalone_fm(text: str) -> str:
+    """Replace standalone \\fmXXX (or {\\fmXXX}) paragraphs with <p class="fmXXX">value</p>.
+
+    A "standalone" paragraph is one whose entire content (after stripping
+    whitespace) is a single \\fmXXX command, optionally wrapped in {}.
+    Inline \\fmXXX commands mixed with other text are left for _FM_BARE.sub.
+    """
+    blocks = _BLANK_LINES.split(text)
+    out = []
+    for block in blocks:
+        m = _FM_STANDALONE.fullmatch(block.strip())
+        if m:
+            val = expand_fm_for_html(m.group(1))
+            if val:
+                out.append(f'<p class="{m.group(1)}">{val}</p>')
+            # empty value: drop the block entirely
+        else:
+            out.append(block)
+    return '\n\n'.join(out)
 
 
 def convert_expressions(raw: str) -> str:
@@ -192,6 +183,9 @@ def convert_expressions(raw: str) -> str:
         r'\thinspace':  ' ',   # narrow no-break space
         r'\bigskip':    '<br/>',
         r'\medskip':    '<br/>',
+        r'\hrule':           '<hr/>',
+        r'\newpage\newpage': '<div class="pagebreak"></div>',
+        r'\newpage':         '<div class="pagebreak"></div>',
         r'\-':          '',
         r'\S':          '§',
         r'{\euml}':     'ë',
@@ -209,14 +203,6 @@ def convert_expressions(raw: str) -> str:
         result = _eliminate_cmd(result, cmd)
     result = _replace_cmd(result, r'\onlyforltoe', '', '')
 
-    # Target-specific frontmatter blocks
-    if cfg.htmlonly:
-        result = _HTML_FM.sub(lambda m: _build_html_frontmatter(m.group(1)), result)
-        result = _EPUB_FM.sub('', result)
-    else:
-        result = _HTML_FM.sub('', result)
-        result = _EPUB_FM.sub(lambda m: m.group(1), result)
-
     # \sffamily...\rmfamily → semantic HTML before \fmXXX expansion so fm keys are still present
     result = re.sub(
         r'\\sffamily\b(.*?)\\rmfamily\b',
@@ -225,7 +211,13 @@ def convert_expressions(raw: str) -> str:
     )
     result = result.replace(r'\sffamily', '').replace(r'\rmfamily', '')
 
-    # Expand remaining \fmXXX in body text — full expansion including nested refs and LaTeX subs
+    # Standalone \fmXXX paragraphs → <p class="fmXXX">value</p>  (preserves CSS class)
+    result = _expand_standalone_fm(result)
+
+    # Inline {\fmXXX} → plain text (class already applied by _expand_standalone_fm where applicable)
+    result = _FM_BRACED.sub(lambda m: expand_fm_for_html(m.group(1)) or m.group(0), result)
+
+    # Inline \fmXXX in body text — full expansion including nested refs and LaTeX subs
     result = _FM_BARE.sub(lambda m: expand_fm_for_html(m.group(1)) or m.group(0), result)
 
     # \the\year → current year (fallback if \fmyear was not used)
@@ -256,7 +248,6 @@ def convert_expressions(raw: str) -> str:
         r'\makecopyright',
         r'\makehalftitle',
         r'\maketitle',
-        r'\newpage',
         r'\tableofcontents',
         r'~\vfill',
         r'\vfill',
@@ -297,7 +288,7 @@ def convert_expressions(raw: str) -> str:
 
 
 _BLANK_LINES = re.compile(r'\n[ \t]*\n+')
-_BLOCK_OPEN  = re.compile(r'^</?(?:table|div|ul|ol|dl|blockquote|pre|figure|h[1-6]|p|nav|footer|thead|tbody|tfoot|tr)\b', re.IGNORECASE)
+_BLOCK_OPEN  = re.compile(r'^</?(?:table|div|ul|ol|dl|blockquote|pre|figure|h[1-6]|p|nav|footer|thead|tbody|tfoot|tr|hr)\b', re.IGNORECASE)
 
 _FM_BRACED = re.compile(r'\{\\(fm\w+)\}')
 

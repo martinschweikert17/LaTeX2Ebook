@@ -1,0 +1,375 @@
+/* epub.css – Stylesheet for EPUB output
+   Placeholders use {name} syntax and are filled by ebook/builder.py.
+   Keep all rules EPUB-safe: no fixed layout, no browser-only pseudo-classes,
+   no CSS custom properties, no flexbox/grid, no @media queries.
+*/
+
+/* ------------------------------------------------------------------ */
+/* Typography – base                                                    */
+/* ------------------------------------------------------------------ */
+
+body {
+  font-family: serif;
+  font-size: 1em;
+  line-height: 1.5;
+  color: #000;
+}
+
+/* ------------------------------------------------------------------ */
+/* Headings                                                             */
+/* ------------------------------------------------------------------ */
+
+h1, h2, h3, h4, h5 {
+  font-family: sans-serif;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  page-break-after: avoid;
+}
+
+h1 { font-size: 1.8em; }
+h2 { font-size: 1.4em; }
+h3 { font-size: 1.2em; }
+h4 { font-size: 1.0em; }
+h5 { font-size: 0.9em; }
+
+/* ------------------------------------------------------------------ */
+/* Title page                                                           */
+/* ------------------------------------------------------------------ */
+
+p.fmtitle    { {fmtitlecss} }
+p.fmsubtitle { {fmsubtitlecss} }
+p.fmauthor   { {fmauthorcss} }
+p.fmyear     { {fmyearcss} }
+hr.fmrule    { {fmcopyrightrulecss} }
+p.fmcopyright { {fmcopyrightcss} }
+p.fmtableofcontent { {fmtableofcontentcss} }
+
+/* Page break (from \newpage) */
+div.pagebreak {
+  page-break-before: always;
+  break-before: page;
+}
+
+/* ------------------------------------------------------------------ */
+/* Paragraphs                                                           */
+/* ------------------------------------------------------------------ */
+
+p {
+  margin-top: 0;
+  margin-bottom: 0.8em;
+  text-align: justify;
+  orphans: 2;
+  widows: 2;
+}
+
+/* ------------------------------------------------------------------ */
+/* Block elements                                                       */
+/* ------------------------------------------------------------------ */
+
+blockquote {
+  margin: 1em 2em;
+  font-style: italic;
+}
+
+p.quotation {
+  margin-left: 2em;
+  margin-right: 2em;
+  text-indent: 0;
+}
+
+p.centerline {
+  text-align: center;
+}
+
+div.flushright {
+  text-align: right;
+}
+
+p.minisec {
+  font-family: sans-serif;
+  font-size: 1.0em;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  page-break-after: avoid;
+}
+
+ul, ol {
+  margin: 0.5em 0 0.8em 2em;
+  padding: 0;
+}
+
+li {
+  margin-bottom: 0.3em;
+}
+
+dl {
+  margin: 0.5em 0 0.8em 0;
+}
+
+dt {
+  font-weight: bold;
+  margin-top: 0.5em;
+}
+
+dd {
+  margin-left: 2em;
+  margin-bottom: 0.3em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Inline elements                                                      */
+/* ------------------------------------------------------------------ */
+
+em     { font-style: italic; }
+strong { font-weight: bold; }
+
+span.longversionname { {longversionname_css} }
+span.transliteration { {transliteration_css} }
+span.verseemphasis   { {verseemphasis_css} }
+span.personname      { {personname_css} }
+span.smallcaps       { {smallcaps_css} }
+
+a.fullref { display: inline-block; vertical-align: baseline; white-space: nowrap; }
+a.fullref span.fullref-title { {fullreftitle_css} }
+a.citetitle { font-style: italic; }
+
+.latex {
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 1.2em;
+  display: inline-block;
+  line-height: 1;
+}
+.latex span:nth-child(1) {
+  text-transform: uppercase;
+  font-size: 0.7em;
+  vertical-align: 0.35em;
+  margin-left: -0.36em;
+  margin-right: -0.15em;
+}
+.latex span:nth-child(2) {
+  text-transform: uppercase;
+  font-size: 1em;
+  vertical-align: -0.4em;
+  margin-left: -0.15em;
+  margin-right: -0.15em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Table of contents                                                    */
+/* ------------------------------------------------------------------ */
+
+nav.toc {
+  margin: 1em 0 2em 0;
+}
+
+p.toc-entry {
+  margin: 0.15em 0;
+  text-align: left;
+}
+
+p.toc-part {
+  font-weight: bold;
+  margin-top: 0.6em;
+}
+
+p.toc-chapter       { padding-left: 0; }
+p.toc-section       { padding-left: 1.5em; }
+p.toc-subsection    { padding-left: 3.0em; }
+p.toc-subsubsection { padding-left: 4.5em; }
+
+/* ------------------------------------------------------------------ */
+/* Literature list                                                      */
+/* ------------------------------------------------------------------ */
+
+p.literature-entry {
+  margin-top: 0;
+  margin-bottom: 0.6em;
+  text-indent: -1.5em;
+  padding-left: 1.5em;
+  overflow-wrap: break-word;
+  text-align: left;
+}
+
+/* ------------------------------------------------------------------ */
+/* Verse numbers                                                        */
+/* ------------------------------------------------------------------ */
+
+span.versenumber {
+  vertical-align: super;
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Footnotes                                                            */
+/* ------------------------------------------------------------------ */
+
+a.footnote-ref {
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+  text-decoration: none;
+}
+
+a.footnote-backref {
+  text-decoration: none;
+  font-size: 1.2em;
+  margin-left: 0.4em;
+}
+
+p.footnote {
+  font-size: 0.85em;
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+  text-align: left;
+}
+
+p.pfootnote {
+  font-size: 0.85em;
+  margin-top: 0.4em;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+p.pfootnote-continuation {
+  font-size: 0.85em;
+  margin-top: 0;
+  margin-bottom: 0;
+  text-indent: 1.5em;
+  text-align: left;
+}
+
+p.footnote-inline {
+  font-size: 0.85em;
+  margin-left: 2em;
+  margin-right: 2em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  text-align: left;
+}
+
+p.pfootnote-inline {
+  font-size: 0.85em;
+  margin-left: 2em;
+  margin-right: 2em;
+  margin-top: 0.3em;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+p.pfootnote-inline-continuation {
+  font-size: 0.85em;
+  margin-left: 2em;
+  margin-right: 2em;
+  margin-top: 0;
+  margin-bottom: 0;
+  text-indent: 1.5em;
+  text-align: left;
+}
+
+p.fn-inline-end {
+  margin-bottom: 0.8em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Hebrew text                                                          */
+/* ------------------------------------------------------------------ */
+
+span.hebrew {
+  direction: rtl;
+  unicode-bidi: embed;
+  font-family: "SBL Hebrew", "Ezra SIL", "David", serif;
+  font-size: {hebrewfontsize};
+  font-weight: bold;
+}
+
+span.hebrew-footnote {
+  direction: rtl;
+  unicode-bidi: embed;
+  font-family: "SBL Hebrew", "Ezra SIL", "David", serif;
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+/* ------------------------------------------------------------------ */
+/* Greek text                                                           */
+/* ------------------------------------------------------------------ */
+
+span.greek {
+  font-family: "SBL Greek", "Gentium Plus", "Gentium", "Palatino Linotype", serif;
+  font-size: {greekfontsize};
+}
+
+/* ------------------------------------------------------------------ */
+/* Links                                                                */
+/* ------------------------------------------------------------------ */
+
+a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ */
+/* Images                                                               */
+/* ------------------------------------------------------------------ */
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tables                                                               */
+/* ------------------------------------------------------------------ */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+table.tabular {
+  width: auto;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 0.4em 0.6em;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  font-weight: bold;
+}
+
+/* ------------------------------------------------------------------ */
+/* Font-family switches                                                 */
+/* ------------------------------------------------------------------ */
+
+div.sffamily { font-family: sans-serif; }
+
+/* ------------------------------------------------------------------ */
+/* Footer                                                               */
+/* ------------------------------------------------------------------ */
+
+footer {
+  font-size: 0.85em;
+  margin-top: 2em;
+}
+
+hr.footer-rule {
+  border: none;
+  border-top: 1px solid #aaa;
+  margin-bottom: 0.5em;
+}
+
+p.footer-text {
+  margin-top: 0;
+  margin-bottom: 0.3em;
+  text-align: left;
+}

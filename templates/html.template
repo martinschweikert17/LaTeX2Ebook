@@ -67,6 +67,9 @@
     p.fmyear     { {fmyearcss} }
     hr.fmrule    { {fmcopyrightrulecss} }
     p.fmcopyright { {fmcopyrightcss} }
+    p.fmtableofcontent { {fmtableofcontentcss} }
+
+    div.pagebreak { page-break-before: always; break-before: page; }
 
     /* ------------------------------------------------------------------ */
     /* Paragraphs                                                           */
