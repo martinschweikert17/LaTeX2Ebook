@@ -41,6 +41,8 @@ def process_toc(text: str) -> str:
 
     lines = []
     for e in entries:
+        if f'id="{e["id"]}"' not in text:
+            continue
         css     = _LEVEL_CSS.get(e['level'], 'toc-chapter')
         display = f"{e['num']} {e['title']}" if e['num'] else e['title']
         lines.append(f'<p class="toc-entry {css}"><a href="#{e["id"]}">{display}</a></p>')

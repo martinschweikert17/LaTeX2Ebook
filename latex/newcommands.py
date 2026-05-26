@@ -165,7 +165,12 @@ def expand_newcommands(text: str) -> str:
     text = ''.join(out)
 
     # --- Pass 3: substitute {\\cmd} occurrences (longest name first) ---
+    # fm* and meta* are intentionally skipped: they carry CSS class information
+    # and are expanded later by convert_expressions with class-preserving logic.
     for cmd_name in sorted(cmds, key=len, reverse=True):
+        short = cmd_name[1:]  # strip leading backslash
+        if short.startswith(('fm', 'meta')):
+            continue
         key = '{' + cmd_name + '}'
         if key in text:
             text = text.replace(key, cmds[cmd_name])
