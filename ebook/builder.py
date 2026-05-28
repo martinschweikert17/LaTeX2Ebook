@@ -183,7 +183,7 @@ class EbookBuilder:
         title     = get_fm_value('fmtitle')     or cfg.title
         author    = get_fm_value('fmauthor')    or cfg.author
         keywords  = get_fm_value('fmkeywords')  or get_meta_value('metakeywords') or cfg.keywords
-        publisher = get_fm_value('fmpublisher') or 'Selbstverlag'
+        publisher = get_fm_value('fmpublisher') or get_fm_value('fmeditor') or 'Selbstverlag'
 
         # --- Book metadata ---
         book = epub.EpubBook()

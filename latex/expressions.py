@@ -333,6 +333,12 @@ def expand_fm_text(text: str) -> str:
         if expanded == text:
             break
         text = expanded
+    # LaTeX line break \\ → HTML line break (must precede \s+ collapse)
+    text = re.sub(r'\\\\(?:\[[^\]]*\])?', '<br/>', text)
+    # {\sz}/{\szquoted} → configured character (szquoted before sz to avoid partial match)
+    cfg = Config.get()
+    text = text.replace(r'{\szquoted}', cfg.szquoted)
+    text = text.replace(r'{\sz}', cfg.sz)
     for old, new in _FM_BASIC_SUBS:
         text = text.replace(old, new)
     text = re.sub(r'\\[A-Za-z]+\{([^{}]*)\}', r'\1', text)
