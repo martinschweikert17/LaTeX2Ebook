@@ -35,15 +35,30 @@ _BIBLE_NAMES: dict[str, str] | None = None
 
 _FM_BARE = re.compile(r'\\(fm\w+)(?![A-Za-z])(?:\{\})?')
 
+# Canonical "blank line" emitted for \bigskip/\medskip/\smallskip in both the
+# \sffamily frontmatter block and normal body text. _VSPACE_BLOCK is wrapped in
+# blank lines so build_paragraphs keeps it as its own block.
+_VSPACE = '<p class="vspace">&#160;</p>'
+_VSPACE_BLOCK = f'\n\n{_VSPACE}\n\n'
+
 _SFFAM_SIZE  = r'(?:\\(?:tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge)\b\s*)*'
 _SFFAM_STYLE = r'(?:\\(?:textbf|bfseries|textit|itshape)\b\s*)*'
-_SFFAM_FM_LINE = re.compile(
+# One frontmatter item: either a {<size>* <style>* \fmXXX} line (group 1 = key)
+# or a vertical-space marker (group 2). \bigskip/\medskip/\smallskip are turned
+# into the canonical _VSPACE paragraph by convert_expressions before this runs;
+# literal commands and <br/> are matched too as harmless fallbacks.
+_SFFAM_ITEM = re.compile(
     r'\{' + _SFFAM_SIZE + _SFFAM_STYLE + _SFFAM_SIZE + r'\\(fm\w+)\s*\}'
-    r'(?:\\\\(?:\[[^\]]*\])?|\s*\\par\b)?',
+    r'(?:\\\\(?:\[[^\]]*\])?|\s*\\par\b)?'
+    r'|(<p class="vspace">[^<]*</p>|<br\s*/?>|\\(?:big|med|small)skip\b)',
     re.DOTALL,
 )
 _SFFAM_FLUSHRIGHT = re.compile(
     r'\\begin\{flushright\}(.*?)\\end\{flushright\}',
+    re.DOTALL,
+)
+_SFFAM_CENTER = re.compile(
+    r'\\begin\{center\}(.*?)\\end\{center\}',
     re.DOTALL,
 )
 
@@ -52,28 +67,35 @@ def _build_sffamily_html(block: str) -> str:
     """Convert \\sffamily...\\rmfamily block content to semantic HTML.
 
     Each {<size>* <style>* \\fmXXX} group becomes <p class="fmXXX">value</p>.
-    A \\begin{flushright}...\\end{flushright} wrapper becomes <div class="flushright">.
+    A \\bigskip/\\medskip/\\smallskip becomes one blank line (<p class="vspace">).
+    A \\begin{flushright}/\\begin{center} wrapper becomes <div class="flushright">/
+    <div class="center">.
     Everything else (\\vfill, \\vspace, \\pagestyle, comments, …) is discarded.
     """
     def _fm_items(content: str) -> list[str]:
         content = re.sub(r'%[^\n]*', '', content)
         parts = []
-        for m in _SFFAM_FM_LINE.finditer(content):
-            val = expand_fm_for_html(m.group(1))
-            if val:
-                parts.append(f'<p class="{m.group(1)}">{val}</p>')
+        for m in _SFFAM_ITEM.finditer(content):
+            if m.group(1):                       # \fmXXX line
+                val = expand_fm_for_html(m.group(1))
+                if val:
+                    parts.append(f'<p class="{m.group(1)}">{val}</p>')
+            else:                                # vertical-space marker → blank line
+                parts.append(_VSPACE)
         return parts
 
-    fr = _SFFAM_FLUSHRIGHT.search(block)
-    if fr:
-        rows = _fm_items(block[:fr.start()])
-        inner = _fm_items(fr.group(1))
-        rows_after = _fm_items(block[fr.end():])
-        if inner:
-            rows.append('<div class="flushright">')
-            rows.extend(inner)
-            rows.append('</div>')
-        rows.extend(rows_after)
+    for env_re, css in ((_SFFAM_FLUSHRIGHT, 'flushright'), (_SFFAM_CENTER, 'center')):
+        env = env_re.search(block)
+        if env:
+            rows = _fm_items(block[:env.start()])
+            inner = _fm_items(env.group(1))
+            rows_after = _fm_items(block[env.end():])
+            if inner:
+                rows.append(f'<div class="{css}">')
+                rows.extend(inner)
+                rows.append('</div>')
+            rows.extend(rows_after)
+            break
     else:
         rows = _fm_items(block)
 
@@ -181,8 +203,9 @@ def convert_expressions(raw: str) -> str:
         r'\ldots':      '…',   # ellipsis …
         r'\,':          ' ',   # narrow no-break space
         r'\thinspace':  ' ',   # narrow no-break space
-        r'\bigskip':    '<br/>',
-        r'\medskip':    '<br/>',
+        r'\bigskip':    _VSPACE_BLOCK,
+        r'\medskip':    _VSPACE_BLOCK,
+        r'\smallskip':  _VSPACE_BLOCK,
         r'\hrule':           '<hr/>',
         r'\newpage\newpage': '<div class="pagebreak"></div>',
         r'\newpage':         '<div class="pagebreak"></div>',
@@ -251,8 +274,6 @@ def convert_expressions(raw: str) -> str:
         r'\tableofcontents',
         r'~\vfill',
         r'\vfill',
-        r'\begin{center}',
-        r'\end{center}',
         r'\phantomsection',
     )
     for expr in _DELETE:

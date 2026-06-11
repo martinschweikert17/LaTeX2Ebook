@@ -83,8 +83,18 @@ p.centerline {
   text-align: center;
 }
 
-div.flushright {
+div.flushright,
+div.flushright p {
   text-align: right;
+}
+
+div.center,
+div.center p {
+  text-align: center;
+}
+
+p.vspace {
+  margin: 0;
 }
 
 p.minisec {

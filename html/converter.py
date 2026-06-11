@@ -165,12 +165,12 @@ class HtmlConverter:
             "    }\n"
             "    a.footnote-ref:hover::after { display: block; }"
         ) if cfg.htmlonly else ""
-        fmtitlecss         = get_fm_value('fmtitlecss')         or "font-family: sans-serif; font-size: 1.8em; font-weight: bold; text-align: center; margin-top: 1em; margin-bottom: 0.3em;"
-        fmsubtitlecss      = get_fm_value('fmsubtitlecss')      or "font-family: sans-serif; font-size: 1.3em; font-style: italic; text-align: center; margin-top: 0; margin-bottom: 0.8em;"
-        fmauthorcss        = get_fm_value('fmauthorcss')        or "font-family: sans-serif; font-size: 1.1em; text-align: center; margin-bottom: 0.3em;"
-        fmyearcss          = get_fm_value('fmyearcss')          or "font-family: sans-serif; font-size: 1.0em; text-align: center; color: #555; margin-bottom: 2em;"
+        fmtitlecss         = get_fm_value('fmtitlecss')         or "font-family: sans-serif; font-size: 1.8em; font-weight: bold; margin-top: 1em; margin-bottom: 0.3em;"
+        fmsubtitlecss      = get_fm_value('fmsubtitlecss')      or "font-family: sans-serif; font-size: 1.3em; font-style: italic; margin-top: 0; margin-bottom: 0.8em;"
+        fmauthorcss        = get_fm_value('fmauthorcss')        or "font-family: sans-serif; font-size: 1.1em; margin-bottom: 0.3em;"
+        fmyearcss          = get_fm_value('fmyearcss')          or "font-family: sans-serif; font-size: 1.0em; color: #555; margin-bottom: 2em;"
         fmcopyrightrulecss    = get_fm_value('fmcopyrightrulecss')    or "border: none; border-top: 1px solid #aaa; margin-top: 2em; margin-bottom: 0.5em;"
-        fmcopyrightcss        = get_fm_value('fmcopyrightcss')        or "font-size: 0.85em; color: #555; text-align: left; margin-top: 0;"
+        fmcopyrightcss        = get_fm_value('fmcopyrightcss')        or "font-size: 0.85em; color: #555; margin-top: 0;"
         fmtableofcontentcss   = get_fm_value('fmtableofcontentcss')   or "font-family: sans-serif; font-size: 1.4em; font-weight: bold; line-height: 1.2; margin-top: 1.5em; margin-bottom: 0.5em;"
         fullreftitle_css    = cfg.fullref_title
         longversionname_css = cfg.longversionname
@@ -195,6 +195,9 @@ class HtmlConverter:
         else:
             footer = ''
 
+        # <title> is plain text: expand {\sz} etc. and turn the \\ line break into a space
+        title_text = re.sub(r'\s+', ' ', expand_fm_text(get_fm_value('fmtitle') or cfg.title).replace('<br/>', ' ')).strip()
+
         template = _TEMPLATE.read_text(encoding="utf-8")
         return (template
                 .replace("{viewport_meta}",       viewport_meta)
@@ -209,7 +212,7 @@ class HtmlConverter:
                 .replace("{dropcap_css}",         dropcap_css)
                 .replace("{programname}",         cfg.programname)
                 .replace("{lang}",                lang)
-                .replace("{title}",               get_fm_value('fmtitle')  or cfg.title)
+                .replace("{title}",               title_text)
                 .replace("{author}",              get_fm_value('fmauthor') or cfg.author)
                 .replace("{fmtitlecss}",          fmtitlecss)
                 .replace("{fmsubtitlecss}",       fmsubtitlecss)

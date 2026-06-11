@@ -293,6 +293,7 @@ _XLTAB_CAPTION = re.compile(r'\\caption\*?(?:\[[^\]]*\])?\{((?:[^{}]|\{[^{}]*\})
 _XLTAB_LABEL   = re.compile(r'\\label\{([^}]+)\}')
 
 _FLUSHRIGHT  = re.compile(r'\\begin\{flushright\}(.*?)\\end\{flushright\}',   re.DOTALL)
+_CENTER      = re.compile(r'\\begin\{center\}(.*?)\\end\{center\}',           re.DOTALL)
 _QUOTE       = re.compile(r'\\begin\{quote\}(.*?)\\end\{quote\}',             re.DOTALL)
 _TABULAR     = re.compile(r'\\begin\{tabular\}\{([^}]*)\}(.*?)\\end\{tabular\}', re.DOTALL)
 _ITEMIZE     = re.compile(r'\\begin\{itemize\}(.*?)\\end\{itemize\}',         re.DOTALL)
@@ -600,6 +601,7 @@ def convert_quotehebrew(text: str, hebrew_class: str = 'hebrew') -> str:
 def apply_formatting(text: str) -> str:
 
     text = _FLUSHRIGHT.sub(lambda m: f'<div class="flushright">{m.group(1)}</div>', text)
+    text = _CENTER.sub(lambda m: f'<div class="center">{m.group(1)}</div>', text)
     text = _ITEMIZE.sub(lambda m: _itemize_to_html(m.group(1), 'ul'), text)
     text = _ENUMERATE.sub(
         lambda m: _itemize_to_html(m.group(2), 'ol', _enumerate_type(m.group(1))), text
