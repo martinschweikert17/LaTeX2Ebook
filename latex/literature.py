@@ -29,7 +29,10 @@ from latex.bib import (
     _latex_to_text,
     _load_bib,
     _short_title,
+    format_date,
+    format_location,
     get_bib,
+    split_list,
 )
 
 _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.literature")
@@ -52,8 +55,7 @@ def _split_persons(field: str) -> list[str]:
     if re.search(r'\bet\s+al\.?\s*$', cleaned, re.IGNORECASE):
         cleaned = re.sub(r'\s*\bet\s+al\.?\s*$', '', cleaned, flags=re.IGNORECASE)
         et_al   = 'et al.'
-    parts  = re.split(r'\s+(?:and|und)\s+', cleaned, flags=re.IGNORECASE)
-    result = [_latex_to_text(p.strip()) for p in parts if p.strip()]
+    result = [_latex_to_text(p) for p in split_list(cleaned)]   # 'others' → 'u. a.'
     if et_al:
         result.append(et_al)
     return result
@@ -61,7 +63,7 @@ def _split_persons(field: str) -> list[str]:
 
 def _normalize_name(name: str) -> str:
     """Ensure 'Firstname Lastname' → 'Lastname, Firstname'; leave 'Last, First' unchanged."""
-    if not name or name == 'et al.' or ',' in name:
+    if not name or name in ('et al.', 'u. a.') or ',' in name:
         return name
     # Reverse word order: last word becomes last name
     idx = name.rfind(' ')
@@ -107,8 +109,18 @@ def _sort_key(entry: dict) -> str:
 
 # ── Edition normalisation ──────────────────────────────────────────────────────
 
+def _lastname(name: str) -> str:
+    name = _normalize_name(_latex_to_text(name))
+    return name.split(',', 1)[0].strip() if ',' in name else name
+
+
 def _first_author_lastname(entry: dict) -> str:
-    """Return the last name of the first author or editor."""
+    """Return the name used in citations, as in the PDF (biblatex authortitle):
+    shortauthor/shorteditor if present (e.g. 'Strack/Billerbeck', 'Nestle/Aland'),
+    otherwise the last name of the first author or editor."""
+    short = entry.get('shortauthor', '') or entry.get('shorteditor', '')
+    if short:
+        return '/'.join(_lastname(p) for p in split_list(short))
     field = entry.get('author', '') or entry.get('editor', '')
     if not field:
         return ''
@@ -137,18 +149,58 @@ def _append_url(content: str, url: str, urldate: str) -> str:
     sep     = ' ' if re.search(r'[\d.!?)]$', content) else '. '
     result  = content + sep + link
     if urldate:
-        result += f' – Zugriff am {urldate}'
+        result += f' – Zugriff am {format_date(urldate)}'
     return result
+
+
+_ROLE_TEXT = {'founder': 'Begr. von', 'redactor': 'Bearb. von'}
+
+
+def _editora_text(entry: dict) -> str:
+    """editora + editoratype (biblatex) → 'Begr. von Gerhard Kittel' / 'Bearb. von …'."""
+    names = entry.get('editora', '')
+    if not names:
+        return ''
+    role  = _ROLE_TEXT.get(entry.get('editoratype', '').strip().lower(), 'Hrsg. von')
+    persons = []
+    for p in _split_persons(names):
+        p = _normalize_name(p)
+        if ',' in p:                                  # 'Kittel, Gerhard' → 'Gerhard Kittel'
+            last, first = (s.strip() for s in p.split(',', 1))
+            p = f'{first} {last}'
+        persons.append(p)
+    return f'{role} {"/".join(persons)}'
+
+
+def _full_title(entry: dict) -> str:
+    """Title incl. subtitle; for multi-volume works (maintitle) 'Reihe. Band 4.1: Titel'."""
+    title    = _latex_to_text(entry.get('title', ''))
+    subtitle = _latex_to_text(entry.get('subtitle', ''))
+    if subtitle:
+        title = f'{title}. {subtitle}' if title else subtitle
+    maintitle = _latex_to_text(entry.get('maintitle', ''))
+    if not maintitle:
+        return title
+    mainsub = _latex_to_text(entry.get('mainsubtitle', ''))
+    head    = f'{maintitle}. {mainsub}' if mainsub else maintitle
+    vol     = _latex_to_text(entry.get('volume', ''))
+    part    = _latex_to_text(entry.get('part', ''))
+    if vol and part:
+        vol = f'{vol}.{part}'
+    if vol:
+        return f'{head}. Band {vol}: {title}' if title else f'{head}. Band {vol}'
+    return f'{head}. {title}' if title else head
 
 
 def _format_book(key: str, entry: dict) -> str:
     author_block = _format_authors_editors(entry)
-    title        = _latex_to_text(entry.get('title',     ''))
-    volume_raw   = _latex_to_text(entry.get('volume',    ''))
+    title        = _full_title(entry)
+    # with maintitle the volume is already part of the title
+    volume_raw   = '' if entry.get('maintitle') else _latex_to_text(entry.get('volume', ''))
     series       = _latex_to_text(entry.get('series',    ''))
-    address      = _latex_to_text(entry.get('address',   ''))
+    address      = format_location(entry)
     publisher    = _latex_to_text(entry.get('publisher', ''))
-    year         = _latex_to_text(entry.get('year',      ''))
+    year         = _latex_to_text(entry.get('year', '') or entry.get('date', ''))
     isbn         = _latex_to_text(entry.get('isbn',      ''))
     note         = _latex_to_text(entry.get('note',      ''))
     edition_str  = _format_edition(entry.get('edition', ''))
@@ -163,6 +215,10 @@ def _format_book(key: str, entry: dict) -> str:
 
     if title:
         segments.append(title)
+
+    editora = _editora_text(entry)
+    if editora:
+        segments.append(editora)
 
     # Volume / series block
     merge_vol_with_loc = False
@@ -224,7 +280,13 @@ def _format_book(key: str, entry: dict) -> str:
     elif merge_vol_with_loc:
         segments.append(vol_for_merge)
 
-    content = '. '.join(segments)
+    # Join with '. ', but no double period after segments like '4. korr. Dr.'
+    content = ''
+    for seg in segments:
+        if not content:
+            content = seg
+        else:
+            content += (' ' if content.endswith(('.', '!', '?')) else '. ') + seg
     content = _append_url(content, url, urldate)
 
     return f'<p class="literature-entry" id="lit-{key}"><strong>{author_block}</strong>: {content}</p>'
@@ -232,8 +294,8 @@ def _format_book(key: str, entry: dict) -> str:
 
 def _format_article(key: str, entry: dict) -> str:
     author_block = _format_authors_editors(entry)
-    title        = _latex_to_text(entry.get('title',   ''))
-    journal      = _latex_to_text(entry.get('journal', ''))
+    title        = _full_title(entry)
+    journal      = _latex_to_text(entry.get('journal', '') or entry.get('journaltitle', ''))
     year         = _latex_to_text(entry.get('year',    ''))
     volume       = _latex_to_text(str(entry.get('volume', '')))
     number       = _latex_to_text(entry.get('number', ''))

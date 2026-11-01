@@ -27,6 +27,40 @@ _logger = logging.getLogger(f"{PROGRAM_NAME}.latex.bib")
 
 CITETITLE_RE = re.compile(r'\\citetitle(?:\[([^\]]*)\])?\{([^}]+)\}')
 
+# ── biblatex citation commands → \\citetitle ──────────────────────────────────
+#
+# The LaTeX sources use biblatex (style authortitle):
+#   \cite[post]{KEY}, \cite[pre][post]{KEY}   → \citetitle[post]{KEY}
+#   \footcite[post]{KEY}                      → \footnote{\citetitle[post]{KEY}.}
+# The old jurabib commands \citetitle / \footcitetitle are accepted as well.
+# \citefield, \citeauthor, \fullcite … are not matched.
+
+_CITE_CMD_RE = re.compile(
+    r'\\(foot)?cite(?:title)?'
+    r'(?:\[([^\]]*)\])?(?:\[([^\]]*)\])?'
+    r'\{([^}]+)\}'
+)
+
+
+def normalize_citations(text: str) -> str:
+    """Rewrite biblatex \\cite / \\footcite (and \\footcitetitle) to \\citetitle.
+
+    Must run before process_footnotes(), so that \\footcite becomes a real
+    footnote.
+    """
+    def _rep(m: re.Match) -> str:
+        foot, opt1, opt2, key = m.group(1), m.group(2), m.group(3), m.group(4)
+        if opt2 is not None:          # \cite[pre][post]{key}
+            pre, post = opt1, opt2
+        else:                         # \cite[post]{key}
+            pre, post = None, opt1
+        cmd = f'\\citetitle[{post}]{{{key}}}' if post else f'\\citetitle{{{key}}}'
+        if pre:
+            cmd = f'{pre} {cmd}'
+        return f'\\footnote{{{cmd}.}}' if foot else cmd
+
+    return _CITE_CMD_RE.sub(_rep, text)
+
 # ── BibTeX parser ──────────────────────────────────────────────────────────────
 
 _ENTRY_RE = re.compile(r'@(\w+)\{(\w+)\s*,', re.IGNORECASE)
@@ -143,6 +177,31 @@ _LATEX_CHARS = [
     (r'\-', ''),
     ('~', ' '),
 ]
+
+# Name/location lists: "A and B and others" (biblatex)
+_LIST_SPLIT_RE = re.compile(r'\s+(?:and|und)\s+', re.IGNORECASE)
+
+
+def split_list(field: str) -> list[str]:
+    """Split a biblatex name or literal list on ' and '; 'others' → 'u. a.'."""
+    parts = [p.strip() for p in _LIST_SPLIT_RE.split(field or '') if p.strip()]
+    return ['u. a.' if p.lower() == 'others' else p for p in parts]
+
+
+def format_location(entry: dict) -> str:
+    """location (biblatex) or address (BibTeX) as plain text: 'Gießen u. a.', 'Giessen/Basel'."""
+    raw = entry.get('location', '') or entry.get('address', '')
+    out = ''
+    for p in split_list(raw):
+        p = _latex_to_text(p)
+        out = p if not out else (f'{out} {p}' if p == 'u. a.' else f'{out}/{p}')
+    return out
+
+
+def format_date(value: str) -> str:
+    """ISO date JJJJ-MM-TT (biblatex urldate) → TT.MM.JJJJ; anything else unchanged."""
+    m = re.fullmatch(r'\s*(\d{4})-(\d{2})-(\d{2})\s*', value or '')
+    return f'{m.group(3)}.{m.group(2)}.{m.group(1)}' if m else (value or '').strip()
 
 
 def _latex_to_text(s: str) -> str:

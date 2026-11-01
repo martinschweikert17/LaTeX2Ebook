@@ -11,7 +11,7 @@ It is the first step in the conversion pipeline.
 
 Pipeline
 --------
-  deflate  →  decomment  →  expand_newcommands  →  apply_personal_commands
+  deflate  →  decomment  →  normalize_citations  →  expand_newcommands  →  apply_personal_commands
   →  convert_bibleref  →  convert_expressions  →  apply_formatting
   →  convert_headings  →  process_footnotes  →  process_toc  →  process_refs  →  process_literature
   →  build_paragraphs
@@ -58,6 +58,7 @@ def _inline_frontmatter(raw: str) -> str:
         )
     content = fm_path.read_text(encoding="utf-8")
     return _INPUT_FRONTMATTER.sub(lambda _: content, raw)
+from latex.bib import normalize_citations
 from latex.bibleref import convert_bibleref
 from latex.decomment import decomment
 from latex.deflate import deflate
@@ -107,6 +108,7 @@ class LatexReader:
         raw = _inline_frontmatter(path.read_text(encoding="utf-8"))
         raw = deflate(raw)
         raw = decomment(raw)
+        raw = normalize_citations(raw)     # biblatex \cite/\footcite → \citetitle
         raw = expand_newcommands(raw)
         raw = apply_personal_commands(raw, build_jhwh_commands())
         raw = convert_bibleref(raw)
